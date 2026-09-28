@@ -1,0 +1,1510 @@
+PERSONAL STORAGE AGENT
+Deep Product & Engineering Idea Specification
+Version: 1.0
+Date: 2026-09-15
+
+============================================================
+1. EXECUTIVE SUMMARY
+============================================================
+
+Personal Storage Agent is an AI-powered digital-storage management system designed to continuously understand, organize, and optimize a person's files across laptop, phone, external drives, and optionally cloud storage.
+
+The core problem is not simply "running out of storage." The deeper problem is DIGITAL ENTROPY: over time, people accumulate screenshots, downloads, duplicate photos, videos, installers, documents, project archives, cached exports, old school material, abandoned projects, and multiple copies of the same files.
+
+Traditional storage cleaners mostly identify:
+- temporary files
+- duplicate files
+- large files
+- old files
+- obvious junk
+
+Personal Storage Agent aims to add SEMANTIC UNDERSTANDING.
+
+Instead of merely saying:
+"You have 14 GB of files."
+
+It should be able to say:
+"You have 14 GB of material that appears to be low-value. I found 3.1 GB of exact duplicates, 2.4 GB of old installers, 1.8 GB of screenshots, and 4.2 GB of files you haven't opened in over a year. I am not recommending deletion of your source-code folders because they appear to be active projects."
+
+The product should behave like a DIGITAL JANITOR + MEMORY LIBRARIAN + STORAGE ADVISOR.
+
+Its central principle:
+
+    UNDERSTAND -> CLASSIFY -> EXPLAIN -> ASK -> ACT
+
+Never:
+
+    SCAN -> GUESS -> DELETE
+
+
+============================================================
+2. THE PROBLEM
+============================================================
+
+Modern users have storage distributed across:
+
+- Windows/macOS/Linux computers
+- Android/iOS phones
+- USB drives
+- external HDDs/SSDs
+- NAS devices
+- Google Drive
+- OneDrive
+- Dropbox
+- iCloud
+- application-specific storage
+
+Storage becomes difficult to manage because users do not remember:
+
+- why they downloaded something
+- whether two files are duplicates
+- whether an old project is still important
+- which photos are meaningful
+- which videos are disposable
+- which installers are still needed
+- whether an archive contains the original source
+- which files are backed up elsewhere
+- what can safely be deleted
+
+The user's storage problem is therefore a KNOWLEDGE problem.
+
+A filesystem knows:
+- filename
+- size
+- extension
+- timestamps
+- path
+
+An intelligent storage assistant should additionally estimate:
+- semantic category
+- probable importance
+- duplication relationship
+- project relationship
+- personal significance
+- access frequency
+- archival value
+- deletion risk
+- confidence
+
+============================================================
+3. PRODUCT VISION
+============================================================
+
+Vision:
+
+"Give every person an AI that quietly maintains their digital life."
+
+The assistant should run in the background and periodically produce small, understandable storage reviews.
+
+Example:
+
+    WEEKLY STORAGE REVIEW
+
+    You gained 6.8 GB this week.
+
+    I found:
+    2.1 GB  exact duplicate files
+    1.4 GB  old video exports
+    900 MB  screenshots older than 12 months
+    1.7 GB  old installers
+    700 MB  files with uncertain importance
+
+    Safe review candidates: 4.4 GB
+
+    [Review]
+
+The system should be:
+- proactive
+- conservative
+- explainable
+- privacy-first
+- cross-device
+- user-controlled
+- continuously learning from user decisions
+
+
+============================================================
+4. PRODUCT PRINCIPLES
+============================================================
+
+4.1 NEVER DELETE IMPORTANT DATA BY DEFAULT
+
+The default action is recommendation, not deletion.
+
+4.2 EXPLAIN EVERY RECOMMENDATION
+
+For example:
+
+    "Recommended because:
+     - exact duplicate of another file
+     - 1.7 GB
+     - not opened in 19 months
+     - another identical copy exists"
+
+4.3 CONFIDENCE-AWARE AI
+
+Every recommendation should have a confidence score.
+
+Example:
+
+    99% duplicate
+    94% temporary installer
+    61% probably obsolete
+    23% uncertain
+
+Low-confidence files should never receive aggressive deletion recommendations.
+
+4.4 LOCAL-FIRST PRIVACY
+
+The system should prefer local indexing and local inference.
+
+Cloud AI should be optional.
+
+4.5 LEARN FROM USER DECISIONS
+
+If a user repeatedly preserves programming projects, the system should become more conservative around code.
+
+If the user repeatedly deletes screenshots after 30 days, the system can eventually recommend them more aggressively.
+
+4.6 DO NOT EQUATE AGE WITH USELESSNESS
+
+An old file can be extremely important.
+
+Age is only one signal.
+
+4.7 STORAGE IS NOT THE ONLY KPI
+
+The product should optimize:
+- storage
+- organization
+- discoverability
+- backup safety
+- duplicate reduction
+- cognitive load
+
+
+============================================================
+5. CORE USER EXPERIENCE
+============================================================
+
+The first-run experience:
+
+STEP 1:
+Install desktop/mobile agent.
+
+STEP 2:
+User selects what can be scanned.
+
+Examples:
+- Downloads
+- Pictures
+- Videos
+- Documents
+- Desktop
+- selected project folders
+- external drives
+
+STEP 3:
+Agent builds a local index.
+
+STEP 4:
+It categorizes files.
+
+STEP 5:
+It generates an initial Storage Health Report.
+
+Example:
+
+    STORAGE HEALTH
+    812 GB used
+
+    Potential cleanup:
+    37.4 GB
+
+    Exact duplicates:
+    8.2 GB
+
+    Similar media:
+    4.7 GB
+
+    Old installers:
+    6.1 GB
+
+    Temporary/export files:
+    5.8 GB
+
+    Unused large files:
+    9.3 GB
+
+    Uncertain:
+    3.3 GB
+
+STEP 6:
+User reviews recommendations.
+
+STEP 7:
+System begins periodic monitoring.
+
+
+============================================================
+6. FILE INTELLIGENCE PIPELINE
+============================================================
+
+A robust pipeline should contain multiple layers.
+
+LAYER 1: FILESYSTEM METADATA
+
+Collect:
+- filename
+- extension
+- path
+- size
+- creation time
+- modification time
+- last access time where reliable
+- permissions
+- filesystem identity
+- inode/file ID where available
+
+LAYER 2: CONTENT EXTRACTION
+
+Depending on file type:
+
+Images:
+- dimensions
+- EXIF
+- OCR
+- visual embeddings
+- perceptual hash
+
+Videos:
+- duration
+- codec
+- resolution
+- thumbnails
+- audio metadata
+- visual embeddings
+
+Documents:
+- text extraction
+- OCR
+- document type
+- language
+- title/author where available
+
+Archives:
+- archive contents
+- nested files
+- compressed size
+- uncompressed estimate
+
+Code:
+- language
+- repository markers
+- dependency files
+- project structure
+- source-code relationships
+
+LAYER 3: SEMANTIC CLASSIFICATION
+
+Classify into categories such as:
+- personal photo
+- family photo
+- screenshot
+- meme
+- school material
+- university material
+- work document
+- financial document
+- identity document
+- programming project
+- installer
+- compressed archive
+- media
+- temporary export
+- duplicate
+- backup
+- unknown
+
+LAYER 4: RELATIONSHIP GRAPH
+
+Files should not be viewed independently.
+
+Build relationships:
+
+    project/
+       ├── source/
+       ├── build/
+       ├── export/
+       ├── backup.zip
+       └── README
+
+The AI should understand that these files may belong to one project.
+
+LAYER 5: RISK ANALYSIS
+
+Estimate:
+- deletion risk
+- duplication risk
+- archival value
+- recovery availability
+- personal significance
+
+
+============================================================
+7. DUPLICATE DETECTION
+============================================================
+
+Duplicate detection should operate in stages.
+
+STAGE A: EXACT DUPLICATES
+
+Compare:
+- file size
+- cryptographic hash
+
+For example:
+SHA-256.
+
+If hashes match, files are almost certainly identical.
+
+STAGE B: PERCEPTUAL DUPLICATES
+
+For images:
+- pHash
+- dHash
+- visual embeddings
+
+This catches:
+- resized photos
+- recompressed photos
+- slightly edited images
+- screenshots of the same image
+
+STAGE C: VIDEO SIMILARITY
+
+Use:
+- thumbnails
+- scene sampling
+- perceptual embeddings
+- duration
+- resolution
+
+STAGE D: SEMANTIC DUPLICATES
+
+Example:
+
+    "project-final.zip"
+    "project-final-2.zip"
+    "project-final-new.zip"
+
+The system should inspect archive contents before recommending deletion.
+
+
+============================================================
+8. IMPORTANCE ENGINE
+============================================================
+
+Importance should not be one simple score.
+
+Create multiple dimensions.
+
+A. ACCESS VALUE
+How frequently is the file used?
+
+B. SEMANTIC VALUE
+What kind of file is it?
+
+C. PERSONAL VALUE
+Could it represent a memory or identity?
+
+D. PROJECT VALUE
+Does it belong to an active project?
+
+E. FINANCIAL/LEGAL VALUE
+Could it be a receipt, tax record, contract, certificate, etc.?
+
+F. BACKUP VALUE
+Does another verified copy exist?
+
+G. RECREATION COST
+How difficult would it be to recreate?
+
+H. DELETION RISK
+What happens if it disappears?
+
+Example:
+
+    file: university_project.zip
+
+    Access:          medium
+    Semantic:        high
+    Project:         high
+    Recreation:      very high
+    Backup:          unknown
+    Deletion risk:   very high
+
+Result:
+    DO NOT RECOMMEND AUTOMATIC DELETION.
+
+
+============================================================
+9. STORAGE RECOMMENDATION ENGINE
+============================================================
+
+Recommendation categories:
+
+CATEGORY 1: DELETE
+
+High confidence.
+
+Examples:
+- exact duplicate
+- known cache
+- obsolete installer
+- disposable generated export
+
+CATEGORY 2: REVIEW
+
+Medium confidence.
+
+Example:
+- old large video
+- unused archive
+- old project artifact
+
+CATEGORY 3: ARCHIVE
+
+Important but rarely accessed.
+
+Example:
+- old university projects
+- completed projects
+- old photos
+
+CATEGORY 4: COMPRESS
+
+Potentially useful but large.
+
+CATEGORY 5: MOVE
+
+Example:
+Move old videos from SSD to HDD/NAS/cloud archive.
+
+CATEGORY 6: KEEP
+
+Important or active.
+
+CATEGORY 7: UNKNOWN
+
+No strong conclusion.
+
+Unknown is a legitimate and important outcome.
+
+
+============================================================
+10. THE NOTIFICATION SYSTEM
+============================================================
+
+Notifications should be occasional, not annoying.
+
+Possible schedules:
+
+- weekly
+- biweekly
+- monthly
+- only when storage exceeds a threshold
+- only when unusually large accumulation occurs
+
+Example:
+
+    Monday — Storage Review
+
+    "Hey, you've accumulated 9.2 GB since last week.
+     I found 3.6 GB that looks safe to review."
+
+    [Review 3.6 GB]
+
+
+Another:
+
+    "Your Downloads folder is 28 GB.
+     11 GB consists of installers you haven't opened
+     in over a year.
+
+     Want me to review them?"
+
+The system should learn when the user ignores notifications.
+
+If ignored repeatedly:
+- reduce frequency
+- combine recommendations
+- avoid notification fatigue
+
+
+============================================================
+11. SMART DAILY MODE
+============================================================
+
+Optional aggressive mode for users who want daily maintenance.
+
+Example:
+
+    DAILY STORAGE CHECK
+
+    +1.2 GB today
+
+    3 screenshots
+    2 duplicate downloads
+    1 old APK
+    1 large temporary export
+
+    Potential cleanup: 740 MB
+
+But daily notifications should be opt-in.
+
+Default:
+Weekly or adaptive cadence.
+
+
+============================================================
+12. NATURAL LANGUAGE INTERFACE
+============================================================
+
+The user should be able to ask:
+
+"Can I delete anything?"
+
+"What's taking up space?"
+
+"Show me things I haven't touched in a year."
+
+"Find duplicates."
+
+"Show me everything related to my old Python projects."
+
+"Which videos are probably disposable?"
+
+"Find files I have backed up elsewhere."
+
+"Why are you recommending this for deletion?"
+
+"Show me files larger than 5 GB."
+
+"Find things I downloaded for one-time use."
+
+"Clean only obvious junk."
+
+The AI should respond conversationally.
+
+
+============================================================
+13. EXAMPLE AI INTERACTION
+============================================================
+
+USER:
+
+    "Can I free 20 GB?"
+
+AI:
+
+    "Yes. I found 31.7 GB worth reviewing.
+
+     High-confidence candidates:
+     7.2 GB — exact duplicate videos
+     4.8 GB — old installers
+     3.1 GB — duplicate downloads
+
+     Medium-confidence:
+     8.6 GB — old exported videos
+     5.2 GB — archives not accessed in 2 years
+
+     I would not touch:
+     - Projects/
+     - Documents/
+     - Photos/
+     - tax-related files
+
+     You can recover about 15.1 GB with
+     high-confidence cleanup alone."
+
+
+============================================================
+14. CROSS-DEVICE ARCHITECTURE
+============================================================
+
+Potential architecture:
+
+                USER ACCOUNT
+                     |
+              PERSONAL INDEX
+                     |
+       +-------------+-------------+
+       |             |             |
+    LAPTOP         PHONE        CLOUD
+       |             |             |
+    Agent          Agent        Connector
+       |             |             |
+       +-------------+-------------+
+                     |
+              Metadata Graph
+                     |
+              AI Reasoning Layer
+                     |
+          Recommendation Engine
+                     |
+              Notification UI
+
+
+Important:
+The cloud should preferably store metadata rather than raw personal files.
+
+Raw files should remain local unless the user explicitly chooses cloud processing.
+
+
+============================================================
+15. PRIVACY ARCHITECTURE
+============================================================
+
+Privacy is a core product differentiator.
+
+Preferred design:
+
+    RAW FILE
+       |
+       v
+    LOCAL INDEX
+       |
+       +--> hashes
+       +--> metadata
+       +--> embeddings
+       +--> extracted text where permitted
+       |
+       v
+    LOCAL AI
+
+Cloud AI:
+Optional.
+
+If cloud AI is used:
+- minimize data
+- send only necessary context
+- encrypt transport
+- clearly disclose processing
+- allow opt-out
+- allow local-only mode
+
+Never secretly upload the user's entire filesystem.
+
+
+============================================================
+16. SECURITY
+============================================================
+
+Because the product has potentially enormous access to personal information, security must be treated as a primary feature.
+
+Requirements:
+- least-privilege filesystem access
+- encrypted local database
+- secure credential storage
+- signed application updates
+- sandboxing where possible
+- audit log
+- deletion confirmation
+- recovery/trash system
+- optional immutable deletion delay
+
+Recommended deletion architecture:
+
+    AI recommendation
+          |
+          v
+      User approval
+          |
+          v
+       Quarantine
+          |
+       7-30 days
+          |
+          v
+    Permanent deletion
+
+
+The quarantine period provides a safety net.
+
+
+============================================================
+17. "ARE YOU SURE?" SHOULD BE INTELLIGENT
+============================================================
+
+Do not ask the same generic confirmation for everything.
+
+Instead:
+
+HIGH CONFIDENCE:
+    "Delete 18 exact duplicate files?
+     You will retain another identical copy."
+
+MEDIUM CONFIDENCE:
+    "These videos haven't been opened in 18 months.
+     They are not duplicated.
+     Review before deletion."
+
+HIGH RISK:
+    "This appears to be the only copy of an important
+     document. I recommend keeping it."
+
+The system should explain uncertainty.
+
+
+============================================================
+18. PROJECT-AWARE INTELLIGENCE
+============================================================
+
+This could become one of the strongest features.
+
+The AI should recognize projects.
+
+For example:
+
+    /Projects/Opal/
+    /Downloads/opal-build.zip
+    /Desktop/opal-demo.mp4
+    /Backups/opal-2025.zip
+
+It can infer:
+
+    These files appear related to the same project.
+
+Then provide:
+
+    PROJECT STORAGE
+
+    Opal
+    Total: 18.4 GB
+
+    Active: 4.2 GB
+    Build artifacts: 6.1 GB
+    Old exports: 3.7 GB
+    Backups: 4.4 GB
+
+    Potential cleanup: 6.9 GB
+
+
+============================================================
+19. TEMPORARY FILE INTELLIGENCE
+============================================================
+
+A major opportunity is identifying files that are technically not
+"system junk" but practically disposable.
+
+Examples:
+- downloaded installers
+- exported videos
+- converted PDFs
+- duplicate ZIPs
+- generated datasets
+- build outputs
+- screenshots used temporarily
+- copied files
+- intermediate renders
+
+The AI can detect patterns.
+
+Example:
+
+    report.pdf
+    report_final.pdf
+    report_final2.pdf
+    report_final_latest.pdf
+    report_final_latest_REAL.pdf
+
+Instead of blindly deleting, the system can group them and ask:
+
+    "These 5 files appear to be versions of the same document.
+     Which one should be retained?"
+
+
+============================================================
+20. MEMORY PRESERVATION MODE
+============================================================
+
+Photos and personal memories require special handling.
+
+A photo should not be judged only by:
+- age
+- file size
+- access frequency
+
+Possible indicators of personal value:
+- faces
+- recurring people
+- location clusters
+- event clusters
+- dates
+- albums
+- captions
+- uniqueness
+- whether it is the only photo from an event
+
+Example:
+
+    "These 42 photos look visually similar.
+     31 appear to be duplicates or near-duplicates.
+
+     However, 4 appear to be unique photos from
+     a different event.
+
+     I recommend reviewing rather than bulk deleting."
+
+
+============================================================
+21. STORAGE HEALTH SCORE
+============================================================
+
+Possible dashboard:
+
+    STORAGE HEALTH: 78/100
+
+    Capacity       42/100
+    Duplicates     89/100
+    Organization   71/100
+    Backup safety  62/100
+    Junk           84/100
+
+The score should be transparent.
+
+Do not create arbitrary gamification that pressures users to delete.
+
+
+============================================================
+22. BACKUP AWARENESS
+============================================================
+
+A future version should understand backup relationships.
+
+Example:
+
+    file A:
+    Laptop/Projects/X/source.zip
+
+    matching copy:
+    ExternalSSD/Backup/X/source.zip
+
+Then:
+
+    "A verified second copy exists on External SSD."
+
+But "backup exists" must be treated carefully.
+
+A file should only be considered safely backed up if:
+- copy exists
+- copy is readable
+- copy is sufficiently current
+- destination is accessible
+- integrity can be verified
+
+Potential future feature:
+
+    3-2-1 BACKUP CHECK
+
+    3 copies
+    2 storage media
+    1 offsite copy
+
+
+============================================================
+23. TECHNICAL MVP
+============================================================
+
+The first version should NOT attempt to manage everything.
+
+Recommended MVP:
+
+PLATFORM:
+Windows desktop first.
+
+WHY:
+- enormous user base
+- filesystem access
+- easier initial development
+- clear storage pain
+- notifications
+
+MVP FEATURES:
+
+1. Filesystem scanner
+2. Metadata database
+3. Exact duplicate detection
+4. Large-file analysis
+5. Old-file analysis
+6. Installer detection
+7. Screenshot detection
+8. Basic image similarity
+9. Project-folder detection
+10. AI-generated explanations
+11. Review dashboard
+12. Quarantine deletion
+13. Weekly notification
+
+Do not start with iOS + Android + Windows + macOS + cloud.
+
+
+============================================================
+24. SUGGESTED TECH STACK
+============================================================
+
+Desktop:
+
+    Tauri
+    Rust backend
+    TypeScript frontend
+
+Alternative:
+    Electron
+
+Database:
+
+    SQLite
+
+Search/indexing:
+
+    SQLite FTS5 initially
+
+Hashing:
+
+    SHA-256
+    xxHash for fast preliminary filtering
+
+Image similarity:
+
+    perceptual hash
+    local embeddings
+
+AI:
+
+    Local small model where practical
+    Optional cloud LLM for deeper reasoning
+
+Notifications:
+
+    Native OS notification system
+
+Cloud synchronization:
+
+    Optional later feature
+
+
+============================================================
+25. DATABASE CONCEPT
+============================================================
+
+Possible tables:
+
+FILES
+
+    id
+    path
+    filename
+    extension
+    size
+    created_at
+    modified_at
+    accessed_at
+    hash
+    mime_type
+
+CONTENT
+
+    file_id
+    extracted_text
+    embedding
+    ocr_text
+    visual_hash
+
+CLASSIFICATION
+
+    file_id
+    category
+    importance_score
+    confidence
+    deletion_risk
+    archival_score
+
+RELATIONSHIPS
+
+    source_file_id
+    target_file_id
+    relationship_type
+    confidence
+
+RECOMMENDATIONS
+
+    id
+    file_id
+    recommendation_type
+    reason
+    confidence
+    created_at
+    status
+
+USER_DECISIONS
+
+    recommendation_id
+    decision
+    timestamp
+
+This decision history can power personalization.
+
+
+============================================================
+26. AI DECISION MODEL
+============================================================
+
+The LLM should NOT directly perform deletion.
+
+Instead:
+
+    Filesystem Analyzer
+          |
+          v
+    Structured Evidence
+          |
+          v
+    Rules + ML Scoring
+          |
+          v
+    LLM Explanation Layer
+          |
+          v
+    User Recommendation
+          |
+          v
+    User Decision
+          |
+          v
+    Action Engine
+
+The LLM should reason over evidence, not invent evidence.
+
+
+============================================================
+27. RULE ENGINE
+============================================================
+
+Some decisions should remain deterministic.
+
+Example:
+
+IF:
+    hash(A) == hash(B)
+AND:
+    A != B
+THEN:
+    exact_duplicate = TRUE
+
+IF:
+    extension == ".tmp"
+AND:
+    application_not_running
+THEN:
+    candidate = TRUE
+
+IF:
+    file_is_unique
+AND:
+    financial_document
+THEN:
+    deletion_risk = HIGH
+
+AI should complement rules, not replace them.
+
+
+============================================================
+28. ADAPTIVE PERSONALIZATION
+============================================================
+
+The system should learn user-specific behavior.
+
+Example:
+
+User repeatedly deletes:
+- screenshots older than 90 days
+
+System learns:
+    screenshot retention preference = 90 days
+
+User always keeps:
+- source code
+- university projects
+
+System learns:
+    code deletion sensitivity = very high
+
+User archives:
+- old videos
+
+System learns:
+    archive > delete preference
+
+Important:
+Learning should never silently expand deletion permissions.
+
+
+============================================================
+29. STORAGE AUTOMATION LEVELS
+============================================================
+
+LEVEL 0:
+Observe only.
+
+LEVEL 1:
+Recommend.
+
+LEVEL 2:
+User approves grouped actions.
+
+LEVEL 3:
+Automatically clean only explicitly whitelisted categories.
+
+Example whitelist:
+
+    "Automatically remove:
+     browser cache
+     temporary build artifacts
+     exact duplicate downloads"
+
+LEVEL 4:
+Advanced automation.
+
+Should require explicit user configuration.
+
+Default should remain conservative.
+
+
+============================================================
+30. BUSINESS MODEL
+============================================================
+
+Potential model:
+
+FREE:
+- local scanning
+- duplicate detection
+- basic recommendations
+- manual cleanup
+
+PRO:
+- advanced semantic analysis
+- cross-device indexing
+- project intelligence
+- backup analysis
+- advanced automation
+- AI conversational search
+
+Possible pricing:
+- monthly subscription
+- annual subscription
+- lifetime license for local-only version
+
+Privacy-first users may strongly prefer:
+    "Pay once. No cloud required."
+
+
+============================================================
+31. COMPETITIVE DIFFERENTIATION
+============================================================
+
+Traditional cleaner:
+
+    "Large files: 7.2 GB"
+
+Personal Storage Agent:
+
+    "These 4 files are related to an old video project.
+     Two are exported copies of the same source.
+     One appears to be the final version.
+     I recommend deleting the two intermediate exports,
+     but keeping the source and final version."
+
+Traditional cleaner:
+    "Old files."
+
+Personal Storage Agent:
+    "These files haven't been opened for 2 years, but 3 appear
+     to be the only copies of university project source code.
+     I recommend archiving instead of deleting."
+
+Core differentiator:
+
+    SEMANTIC STORAGE MANAGEMENT
+
+
+============================================================
+32. FUTURE FEATURES
+============================================================
+
+Potential future capabilities:
+
+- natural-language filesystem search
+- "find my old Python projects"
+- automatic project grouping
+- duplicate contact-photo detection
+- email attachment cleanup
+- WhatsApp media analysis
+- cloud-drive deduplication
+- NAS integration
+- external-drive monitoring
+- automatic archive tiers
+- cold-storage recommendations
+- storage-cost optimization
+- family/shared-storage management
+- encrypted personal memory vault
+- timeline view of digital life
+- "what changed this month?"
+- AI-generated storage reports
+- disaster recovery planning
+
+
+============================================================
+33. EXTREME FUTURE VISION
+============================================================
+
+Eventually the system could become a PERSONAL DATA OPERATING SYSTEM.
+
+It understands:
+
+    WHAT I HAVE
+    WHY I HAVE IT
+    WHERE IT IS
+    HOW IMPORTANT IT IS
+    WHETHER IT IS DUPLICATED
+    WHETHER IT IS BACKED UP
+    WHEN I LAST USED IT
+    WHAT IT IS RELATED TO
+    WHAT CAN BE ARCHIVED
+    WHAT CAN BE DELETED
+
+The assistant could answer:
+
+    "Show me everything connected to my 2024 college project."
+
+    "What are the five largest categories consuming my SSD?"
+
+    "If my laptop dies tonight, what important things would I lose?"
+
+    "Which files exist in only one location?"
+
+    "Can I free 50 GB without touching anything important?"
+
+    "What can I archive to my external drive?"
+
+This moves the product from CLEANER to PERSONAL DATA INTELLIGENCE.
+
+
+============================================================
+34. KEY SAFETY FAILURE MODES
+============================================================
+
+The product must explicitly defend against:
+
+1. False duplicate detection
+2. Deleting the only copy
+3. Misclassifying personal memories
+4. Misclassifying source code
+5. Deleting financial/legal documents
+6. Broken backup assumptions
+7. Cloud synchronization deleting files everywhere
+8. Ransomware or malicious file manipulation
+9. AI hallucinations
+10. User misunderstanding
+11. Permission escalation
+12. Model compromise
+
+The safest architecture assumes:
+
+    AI CAN BE WRONG.
+
+
+============================================================
+35. SUCCESS METRICS
+============================================================
+
+Primary:
+
+- GB safely recovered
+- percentage of recommendations accepted
+- false-positive deletion rate
+- user recovery rate
+- duplicate reduction
+- storage growth reduction
+
+Quality metric:
+
+    "How often did the AI recommend something
+     the user later regretted deleting?"
+
+This metric should be extremely close to zero.
+
+Other metrics:
+- notification acceptance
+- recommendation confidence calibration
+- scan performance
+- CPU/battery impact
+- privacy incidents
+- crash rate
+
+
+============================================================
+36. PERFORMANCE REQUIREMENTS
+============================================================
+
+Background scanning should be resource-aware.
+
+Laptop:
+- scan primarily while idle
+- avoid excessive CPU usage
+- respect battery state
+- pause during gaming/fullscreen applications
+
+Phone:
+- respect battery
+- use charging/Wi-Fi windows
+- avoid continuous deep scanning
+- use OS-supported background mechanisms
+
+The product should be invisible most of the time.
+
+The user should notice:
+    RESULTS
+
+not:
+    RESOURCE CONSUMPTION
+
+
+============================================================
+37. UX PHILOSOPHY
+============================================================
+
+Do not overwhelm the user with 10,000 recommendations.
+
+Prioritize:
+
+    HIGH VALUE + HIGH CONFIDENCE
+
+Example:
+
+    "I can recover 12.8 GB with 14 safe actions."
+
+This is better than:
+
+    "Here are 8,472 files."
+
+
+============================================================
+38. THE CORE PRODUCT LOOP
+============================================================
+
+Every cycle:
+
+    SCAN
+      ↓
+    UNDERSTAND
+      ↓
+    COMPARE
+      ↓
+    CLASSIFY
+      ↓
+    SCORE
+      ↓
+    EXPLAIN
+      ↓
+    NOTIFY
+      ↓
+    USER DECIDES
+      ↓
+    LEARN
+      ↓
+    REPEAT
+
+
+============================================================
+39. FIRST 30-DAY DEVELOPMENT PLAN
+============================================================
+
+WEEK 1:
+- project setup
+- filesystem crawler
+- SQLite schema
+- metadata indexing
+
+WEEK 2:
+- hashing
+- duplicate groups
+- large-file reports
+- age analysis
+
+WEEK 3:
+- file categorization
+- basic AI integration
+- recommendation engine
+- review UI
+
+WEEK 4:
+- quarantine
+- notifications
+- logging
+- testing
+- safety checks
+
+At the end of 30 days:
+
+User should be able to install the app and receive:
+
+    "I scanned your selected folders.
+
+     17.4 GB may be recoverable.
+
+     6.3 GB exact duplicates
+     3.2 GB old installers
+     4.1 GB large unused exports
+     3.8 GB uncertain
+
+     Review?"
+
+That is enough to validate the core idea.
+
+
+============================================================
+40. LONG-TERM PRODUCT THESIS
+============================================================
+
+Storage is becoming abundant.
+
+But human attention is not.
+
+The future problem is therefore not:
+
+    "Where can I store this?"
+
+It is:
+
+    "Why am I storing this?"
+    "Do I still need this?"
+    "Where is the important copy?"
+    "Is this duplicated?"
+    "Can I safely remove it?"
+    "What happens if I lose it?"
+
+Personal Storage Agent solves this by creating an intelligence layer
+between humans and their growing digital storage.
+
+The ultimate promise:
+
+    YOUR DATA SHOULD NOT BECOME DIGITAL CHAOS.
+
+The system should quietly maintain it.
+
+============================================================
+END
+============================================================
