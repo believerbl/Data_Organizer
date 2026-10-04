@@ -1,6 +1,6 @@
 # Data Organizer
 
-**Created by Parimarjan Shukla**  
+[**Created by Parimarjan Shukla**](https://github.com/believerbl)
 *Local-First AI Digital Storage Management & Semantic Janitor*
 
 ---
@@ -80,3 +80,5 @@ npm run dev
 Open your browser to:
 - **Application Dashboard**: [http://localhost:5173](http://localhost:5173)
 - **Interactive API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+[project link](https://github.com/believerbl/Data_Organizer)
