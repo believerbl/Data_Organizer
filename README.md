@@ -1,6 +1,6 @@
 # Data Organizer
 
-**Created by **[**Parimarjan Shukla**](https://github.com/believerbl)
+**Created by** [**Parimarjan Shukla**](https://github.com/believerbl)
 *Local-First AI Digital Storage Management & Semantic Janitor*
 
 ---
