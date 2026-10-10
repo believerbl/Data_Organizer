@@ -88,6 +88,10 @@ def init_db():
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_rec_status ON recommendations(status);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_rec_type ON recommendations(recommendation_type);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_rec_status_savings ON recommendations(status, potential_saving_bytes DESC, file_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_rec_group_status ON recommendations(group_key, status, potential_saving_bytes DESC);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_rec_file_id ON recommendations(file_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_files_hash_quar_del ON files(hash, is_quarantined, is_deleted, size);")
 
         # Quarantine Vault (with restore ability)
         conn.execute("""

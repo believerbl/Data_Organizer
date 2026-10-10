@@ -82,7 +82,7 @@ export const DuplicatesView: React.FC<Props> = ({ onRefresh }) => {
             {formatBytes(totalDuplicateBytes)} in view
           </div>
           <span style={{ fontSize: "0.76rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>
-            Across {totalGroups.toLocaleString()} duplicate clusters
+            {totalDuplicatesCount} copies across {totalGroups.toLocaleString()} clusters
           </span>
         </div>
       </div>
