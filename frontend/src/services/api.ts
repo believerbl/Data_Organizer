@@ -59,6 +59,14 @@ export interface Recommendation {
   importance_score: number;
 }
 
+export interface RecommendationsResponse {
+  total_count: number;
+  total_savings_bytes: number;
+  limit: number;
+  offset: number;
+  items: Recommendation[];
+}
+
 export interface DuplicateGroup {
   hash: string;
   total_size: number;
@@ -82,6 +90,13 @@ export interface DuplicateGroup {
     category: string;
     deletion_risk: string;
   }>;
+}
+
+export interface DuplicateGroupsResponse {
+  total_groups: number;
+  limit: number;
+  offset: number;
+  groups: DuplicateGroup[];
 }
 
 export interface QuarantineItem {
@@ -152,8 +167,13 @@ export const api = {
     return res.json();
   },
 
-  async getRecommendations(): Promise<Recommendation[]> {
-    const res = await fetch(`${API_BASE}/recommendations`);
+  async getRecommendations(groupKey?: string, limit = 50, offset = 0): Promise<RecommendationsResponse> {
+    const params = new URLSearchParams();
+    if (groupKey && groupKey !== "all") params.append("group_key", groupKey);
+    params.append("limit", limit.toString());
+    params.append("offset", offset.toString());
+
+    const res = await fetch(`${API_BASE}/recommendations?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch recommendations");
     return res.json();
   },
@@ -185,8 +205,8 @@ export const api = {
     return res.json();
   },
 
-  async getDuplicates(): Promise<DuplicateGroup[]> {
-    const res = await fetch(`${API_BASE}/duplicates`);
+  async getDuplicates(limit = 30, offset = 0): Promise<DuplicateGroupsResponse> {
+    const res = await fetch(`${API_BASE}/duplicates?limit=${limit}&offset=${offset}`);
     if (!res.ok) throw new Error("Failed to fetch duplicates");
     return res.json();
   },

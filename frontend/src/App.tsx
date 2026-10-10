@@ -7,7 +7,7 @@ import { QuarantineView } from "./components/QuarantineView";
 import { AdvisorView } from "./components/AdvisorView";
 import { api } from "./services/api";
 import type { 
-  HealthStats, Recommendation, DuplicateGroup, QuarantineItem, 
+  HealthStats, QuarantineItem, 
   ScanTargetsResponse, ScanStatusResponse 
 } from "./services/api";
 import { FolderSync } from "lucide-react";
@@ -15,8 +15,6 @@ import { FolderSync } from "lucide-react";
 export function App() {
   const [currentTab, setCurrentTab] = useState<string>("overview");
   const [stats, setStats] = useState<HealthStats | null>(null);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [quarantineItems, setQuarantineItems] = useState<QuarantineItem[]>([]);
   const [scanTargets, setScanTargets] = useState<ScanTargetsResponse | null>(null);
   const [scanStatus, setScanStatus] = useState<ScanStatusResponse | null>(null);
@@ -29,18 +27,14 @@ export function App() {
     setIsRefreshing(true);
     setBackendError(null);
     try {
-      const [statsData, recsData, dupesData, quarData, targetsData, statusData] = await Promise.all([
+      const [statsData, quarData, targetsData, statusData] = await Promise.all([
         api.getStats().catch(() => null),
-        api.getRecommendations().catch(() => []),
-        api.getDuplicates().catch(() => []),
         api.getQuarantine().catch(() => []),
         api.getTargets().catch(() => ({ drives: [], user_folders: [], default_targets: [] })),
         api.getScanStatus().catch(() => null),
       ]);
 
       if (statsData) setStats(statsData);
-      setRecommendations(recsData);
-      setDuplicateGroups(dupesData);
       setQuarantineItems(quarData);
       if (targetsData) setScanTargets(targetsData);
       if (statusData) setScanStatus(statusData);
@@ -112,14 +106,12 @@ export function App() {
       case "recommendations":
         return (
           <RecommendationsView
-            recommendations={recommendations}
             onRefresh={loadAllData}
           />
         );
       case "duplicates":
         return (
           <DuplicatesView
-            duplicateGroups={duplicateGroups}
             onRefresh={loadAllData}
           />
         );
@@ -150,13 +142,16 @@ export function App() {
 
   const headerInfo = getTabTitle();
 
+  const pendingRecsCount = stats?.indexed?.pending_recommendations_count || 0;
+  const duplicateBytes = stats?.indexed?.duplicate_bytes || 0;
+
   return (
     <div className="app-container">
       <Navbar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        pendingRecsCount={recommendations.length}
-        duplicatesCount={duplicateGroups.length}
+        pendingRecsCount={pendingRecsCount}
+        duplicatesCount={duplicateBytes > 0 ? 1 : 0}
         quarantineCount={quarantineItems.length}
         isScanning={Boolean(scanStatus?.is_scanning)}
         onRefresh={loadAllData}
@@ -182,7 +177,7 @@ export function App() {
                 </span>
               </div>
               <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                {scanStatus.current_index > 0 ? `${scanStatus.current_index} / ${scanStatus.total_files} files` : "Discovering files..."}
+                {scanStatus.current_index > 0 ? `${scanStatus.current_index.toLocaleString()} / ${scanStatus.total_files.toLocaleString()} files` : "Discovering files..."}
               </span>
             </div>
 

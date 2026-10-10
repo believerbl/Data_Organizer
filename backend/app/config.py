@@ -16,7 +16,6 @@ DEFAULT_SCAN_TARGETS = [
     str(USER_HOME / "Videos"),
 ]
 
-# Excluded system & sensitive patterns
 IGNORE_DIR_NAMES = {
     "$recycle.bin",
     "system volume information",
@@ -33,6 +32,14 @@ IGNORE_DIR_NAMES = {
     "programdata",
     ".venv",
     "venv",
+    "site-packages",
+    "dist-packages",
+    "myenv",
+    "env",
+    ".envs",
+    ".cache",
+    "temp",
+    "tmp",
 }
 
 # Size definitions

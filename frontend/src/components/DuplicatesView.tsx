@@ -1,37 +1,69 @@
-import React, { useState } from "react";
-import { Shield, CheckCircle, FileCheck, Layers } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Shield, CheckCircle, FileCheck, Layers, ChevronDown, RefreshCw } from "lucide-react";
 import { api } from "../services/api";
-import type { DuplicateGroup } from "../services/api";
+import type { DuplicateGroup, DuplicateGroupsResponse } from "../services/api";
 import { formatBytes, formatDate } from "../utils/formatters";
 
 interface Props {
-  duplicateGroups: DuplicateGroup[];
   onRefresh: () => void;
 }
 
-export const DuplicatesView: React.FC<Props> = ({ duplicateGroups = [], onRefresh }) => {
+export const DuplicatesView: React.FC<Props> = ({ onRefresh }) => {
+  const [data, setData] = useState<DuplicateGroupsResponse | null>(null);
+  const [groups, setGroups] = useState<DuplicateGroup[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [actingFileId, setActingFileId] = useState<number | null>(null);
+  const [limit] = useState<number>(30);
+  const [offset, setOffset] = useState<number>(0);
 
-  const safeGroups = duplicateGroups || [];
+  const fetchDupes = async (currentOffset: number, append = false) => {
+    setIsLoading(true);
+    try {
+      const res = await api.getDuplicates(limit, currentOffset);
+      setData(res);
+      if (append) {
+        setGroups(prev => [...prev, ...(res.groups || [])]);
+      } else {
+        setGroups(res.groups || []);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch duplicates:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const totalDuplicateBytes = safeGroups.reduce((acc, g) => {
-    const dupesSize = (g.duplicates || []).reduce((dAcc, d) => dAcc + (d.size || 0), 0);
-    return acc + dupesSize;
-  }, 0);
+  useEffect(() => {
+    fetchDupes(0, false);
+  }, []);
 
-  const totalDuplicatesCount = safeGroups.reduce((acc, g) => acc + (g.duplicates || []).length, 0);
+  const handleLoadMore = () => {
+    const nextOffset = offset + limit;
+    setOffset(nextOffset);
+    fetchDupes(nextOffset, true);
+  };
 
   const handleQuarantine = async (fileId: number) => {
     setActingFileId(fileId);
     try {
       await api.quarantineFile(fileId, 30);
       onRefresh();
+      fetchDupes(0, false);
     } catch (err: any) {
       alert(`Error quarantining duplicate: ${err.message}`);
     } finally {
       setActingFileId(null);
     }
   };
+
+  const totalGroups = data?.total_groups || 0;
+
+  const totalDuplicateBytes = groups.reduce((acc, g) => {
+    const dupesSize = (g.duplicates || []).reduce((dAcc, d) => dAcc + (d.size || 0), 0);
+    return acc + dupesSize;
+  }, 0);
+
+  const totalDuplicatesCount = groups.reduce((acc, g) => acc + (g.duplicates || []).length, 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -47,15 +79,15 @@ export const DuplicatesView: React.FC<Props> = ({ duplicateGroups = [], onRefres
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--accent-amber)" }}>
-            {formatBytes(totalDuplicateBytes)}
+            {formatBytes(totalDuplicateBytes)} in view
           </div>
           <span style={{ fontSize: "0.76rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>
-            Across {totalDuplicatesCount} redundant files
+            Across {totalGroups.toLocaleString()} duplicate clusters
           </span>
         </div>
       </div>
 
-      {safeGroups.length === 0 ? (
+      {groups.length === 0 && !isLoading ? (
         <div className="glass-panel" style={{ textAlign: "center", padding: "48px 24px" }}>
           <CheckCircle size={42} style={{ color: "var(--accent-emerald)", margin: "0 auto 12px" }} />
           <h4 style={{ fontSize: "1.1rem", marginBottom: 6 }}>No duplicate files detected</h4>
@@ -65,7 +97,7 @@ export const DuplicatesView: React.FC<Props> = ({ duplicateGroups = [], onRefres
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {safeGroups.map((group, idx) => (
+          {groups.map((group, idx) => (
             <div key={group.hash || idx} className="glass-panel" style={{ padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -146,6 +178,28 @@ export const DuplicatesView: React.FC<Props> = ({ duplicateGroups = [], onRefres
               </div>
             </div>
           ))}
+
+          {/* Load More Duplicates */}
+          {groups.length < totalGroups && (
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                style={{ padding: "10px 24px" }}
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw size={14} className="status-dot scanning" /> Loading more duplicates...
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={16} /> Load Next 30 Duplicate Groups ({totalGroups - groups.length} remaining)
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

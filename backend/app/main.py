@@ -194,10 +194,24 @@ def get_scan_status():
         return dict(scan_state)
 
 @app.get("/api/recommendations")
-def get_recommendations(status: str = "PENDING"):
-    """Fetches recommendations categorized by actionable groups."""
+def get_recommendations(status: str = "PENDING", group_key: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """Fetches recommendations with high-performance pagination and total savings summary."""
     with get_db() as conn:
-        recs = conn.execute("""
+        where_clauses = ["r.status = ?"]
+        params = [status]
+        
+        if group_key and group_key != "all":
+            where_clauses.append("r.group_key = ?")
+            params.append(group_key)
+            
+        where_sql = " AND ".join(where_clauses)
+        
+        # Summary counts
+        total_count = conn.execute(f"SELECT COUNT(*) FROM recommendations r WHERE {where_sql}", params).fetchone()[0]
+        total_savings = conn.execute(f"SELECT COALESCE(SUM(r.potential_saving_bytes), 0) FROM recommendations r WHERE {where_sql}", params).fetchone()[0]
+
+        # Fetch page items (ordered by highest recoverable space first)
+        query = f"""
             SELECT 
                 r.id, r.file_id, r.recommendation_type, r.group_key, r.title,
                 r.reason, r.confidence, r.potential_saving_bytes, r.status, r.created_at,
@@ -206,16 +220,33 @@ def get_recommendations(status: str = "PENDING"):
             FROM recommendations r
             JOIN files f ON r.file_id = f.id
             JOIN classifications c ON f.id = c.file_id
-            WHERE r.status = ?
+            WHERE {where_sql}
             ORDER BY r.potential_saving_bytes DESC
-        """, (status,)).fetchall()
+            LIMIT ? OFFSET ?
+        """
+        recs = conn.execute(query, params + [limit, offset]).fetchall()
         
-        return [dict(row) for row in recs]
+        return {
+            "total_count": total_count,
+            "total_savings_bytes": total_savings,
+            "limit": limit,
+            "offset": offset,
+            "items": [dict(row) for row in recs]
+        }
 
 @app.get("/api/duplicates")
-def get_duplicate_groups():
-    """Returns clustered duplicate groups with primary file preserved and redundant copies."""
+def get_duplicate_groups(limit: int = 30, offset: int = 0):
+    """Returns paginated clustered duplicate groups with primary file preserved and redundant copies."""
     with get_db() as conn:
+        total_groups_count = conn.execute("""
+            SELECT COUNT(*) FROM (
+                SELECT hash FROM files
+                WHERE hash IS NOT NULL AND is_quarantined = 0 AND is_deleted = 0
+                GROUP BY hash
+                HAVING COUNT(*) > 1
+            )
+        """).fetchone()[0]
+
         groups = conn.execute("""
             SELECT hash, COUNT(*) as cnt, SUM(size) as total_size
             FROM files
@@ -223,7 +254,8 @@ def get_duplicate_groups():
             GROUP BY hash
             HAVING cnt > 1
             ORDER BY total_size DESC
-        """).fetchall()
+            LIMIT ? OFFSET ?
+        """, (limit, offset)).fetchall()
 
         result = []
         for g in groups:
@@ -243,7 +275,13 @@ def get_duplicate_groups():
                     "primary": dict(files_in_group[0]),
                     "duplicates": [dict(f) for f in files_in_group[1:]]
                 })
-        return result
+
+        return {
+            "total_groups": total_groups_count,
+            "limit": limit,
+            "offset": offset,
+            "groups": result
+        }
 
 @app.post("/api/recommendations/quarantine")
 def quarantine_recommendation(req: QuarantineActionRequest):

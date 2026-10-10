@@ -1,38 +1,58 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Sparkles, Shield, CheckCircle2, 
-  FileText, Image as ImageIcon, Box, Archive 
+  FileText, Image as ImageIcon, Box, Archive, RefreshCw, ChevronDown 
 } from "lucide-react";
 import { api } from "../services/api";
-import type { Recommendation } from "../services/api";
+import type { Recommendation, RecommendationsResponse } from "../services/api";
 import { formatBytes, formatDate } from "../utils/formatters";
 
 interface Props {
-  recommendations: Recommendation[];
   onRefresh: () => void;
 }
 
-export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onRefresh }) => {
+export const RecommendationsView: React.FC<Props> = ({ onRefresh }) => {
   const [filterGroup, setFilterGroup] = useState<string>("all");
+  const [data, setData] = useState<RecommendationsResponse | null>(null);
+  const [items, setItems] = useState<Recommendation[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [actingFileId, setActingFileId] = useState<number | null>(null);
+  const [limit] = useState<number>(50);
+  const [offset, setOffset] = useState<number>(0);
 
-  const safeRecs = recommendations || [];
+  const fetchRecs = async (group: string, currentOffset: number, append = false) => {
+    setIsLoading(true);
+    try {
+      const res = await api.getRecommendations(group, limit, currentOffset);
+      setData(res);
+      if (append) {
+        setItems(prev => [...prev, ...(res.items || [])]);
+      } else {
+        setItems(res.items || []);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch recommendations:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const filteredRecs = safeRecs.filter((r) => {
-    if (filterGroup === "all") return true;
-    return r.group_key === filterGroup;
-  });
+  useEffect(() => {
+    setOffset(0);
+    fetchRecs(filterGroup, 0, false);
+  }, [filterGroup]);
 
-  const highConfidenceRecs = safeRecs.filter(
-    (r) => (r.confidence || 0) >= 0.90 && r.recommendation_type === "DELETE"
-  );
-
-  const totalFilteredSavings = filteredRecs.reduce((acc, r) => acc + (r.potential_saving_bytes || 0), 0);
+  const handleLoadMore = () => {
+    const nextOffset = offset + limit;
+    setOffset(nextOffset);
+    fetchRecs(filterGroup, nextOffset, true);
+  };
 
   const handleQuarantine = async (fileId: number) => {
     setActingFileId(fileId);
     try {
       await api.quarantineFile(fileId, 30);
+      setItems(prev => prev.filter(r => r.file_id !== fileId));
       onRefresh();
     } catch (err: any) {
       alert(`Error quarantining file: ${err.message}`);
@@ -42,22 +62,26 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
   };
 
   const handleQuarantineBatch = async () => {
-    if (highConfidenceRecs.length === 0) return;
-    const fileIds = highConfidenceRecs.map((r) => r.file_id);
+    const highConf = items.filter(r => (r.confidence || 0) >= 0.90 && r.recommendation_type === "DELETE");
+    if (highConf.length === 0) return;
+    const fileIds = highConf.map(r => r.file_id);
     if (!window.confirm(`Move ${fileIds.length} high-confidence items to safe 30-day Quarantine?`)) {
       return;
     }
     try {
       await api.quarantineBatch(fileIds, 30);
+      setItems(prev => prev.filter(r => !fileIds.includes(r.file_id)));
       onRefresh();
+      fetchRecs(filterGroup, 0, false);
     } catch (err: any) {
       alert(`Batch quarantine error: ${err.message}`);
     }
   };
 
-  const handleDismiss = async (recId: number) => {
+  const handleDismiss = async (recId: number, fileId: number) => {
     try {
       await api.dismissRecommendation(recId);
+      setItems(prev => prev.filter(r => r.file_id !== fileId));
       onRefresh();
     } catch (err: any) {
       alert(`Error dismissing recommendation: ${err.message}`);
@@ -85,6 +109,10 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
     }
   };
 
+  const totalCount = data?.total_count || 0;
+  const totalSavings = data?.total_savings_bytes || 0;
+  const highConfidenceCount = items.filter(r => (r.confidence || 0) >= 0.90 && r.recommendation_type === "DELETE").length;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Top Controls Bar */}
@@ -92,7 +120,7 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
         {/* Filter Pills */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[
-            { id: "all", label: "All Items" },
+            { id: "all", label: "All Categories" },
             { id: "exact_duplicates", label: "Exact Duplicates" },
             { id: "obsolete_installers", label: "Obsolete Installers" },
             { id: "aged_screenshots", label: "Aged Screenshots" },
@@ -120,36 +148,40 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
         </div>
 
         {/* Batch Quarantine for High-Confidence */}
-        {highConfidenceRecs.length > 0 && (
+        {highConfidenceCount > 0 && (
           <button 
             id="batch-quarantine-btn"
             className="btn btn-primary btn-sm"
             onClick={handleQuarantineBatch}
           >
-            <Shield size={14} /> Quarantine High Confidence ({highConfidenceRecs.length} items)
+            <Shield size={14} /> Quarantine High Confidence ({highConfidenceCount} in view)
           </button>
         )}
       </div>
 
       {/* Summary Line */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", color: "var(--text-muted)" }}>
-        <span>Showing {filteredRecs.length} recommendations</span>
-        <span>Potential recoverable space: <strong style={{ color: "var(--accent-cyan)" }}>{formatBytes(totalFilteredSavings)}</strong></span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.86rem", color: "var(--text-muted)" }}>
+        <span>
+          Showing top {items.length} of <strong style={{ color: "#fff" }}>{totalCount.toLocaleString()}</strong> recommendations
+        </span>
+        <span>
+          Potential recoverable space: <strong style={{ color: "var(--accent-cyan)", fontSize: "0.95rem" }}>{formatBytes(totalSavings)}</strong>
+        </span>
       </div>
 
       {/* Recommendation Cards List */}
-      {filteredRecs.length === 0 ? (
+      {items.length === 0 && !isLoading ? (
         <div className="glass-panel" style={{ textAlign: "center", padding: "48px 24px" }}>
           <CheckCircle2 size={42} style={{ color: "var(--accent-emerald)", margin: "0 auto 12px" }} />
-          <h4 style={{ fontSize: "1.1rem", marginBottom: 6 }}>All clear! No recommendations found.</h4>
+          <h4 style={{ fontSize: "1.1rem", marginBottom: 6 }}>No recommendations in this category</h4>
           <p style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
-            Either your selected folders are clean, or run another scan to index new files.
+            Either your files in this category are clean, or select another filter.
           </p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {filteredRecs.map((rec) => (
-            <div key={rec.id} className="rec-card">
+          {items.map((rec) => (
+            <div key={`${rec.id}_${rec.file_id}`} className="rec-card">
               <div className="rec-card-header">
                 <div className="rec-file-info">
                   <div className="rec-file-icon">
@@ -186,7 +218,7 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
                 <div style={{ display: "flex", gap: 8 }}>
                   <button 
                     className="btn btn-secondary btn-sm"
-                    onClick={() => handleDismiss(rec.id)}
+                    onClick={() => handleDismiss(rec.id, rec.file_id)}
                   >
                     Keep File
                   </button>
@@ -201,6 +233,28 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onR
               </div>
             </div>
           ))}
+
+          {/* Load More Button if more recommendations exist */}
+          {items.length < totalCount && (
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                style={{ padding: "10px 24px" }}
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw size={14} className="status-dot scanning" /> Loading more...
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={16} /> Load Next 50 Recommendations ({totalCount - items.length} remaining)
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
