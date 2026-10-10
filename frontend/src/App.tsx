@@ -5,9 +5,8 @@ import { RecommendationsView } from "./components/RecommendationsView";
 import { DuplicatesView } from "./components/DuplicatesView";
 import { QuarantineView } from "./components/QuarantineView";
 import { AdvisorView } from "./components/AdvisorView";
-import { 
-  api, HealthStats, Recommendation, DuplicateGroup, QuarantineItem 
-} from "./services/api";
+import { api } from "./services/api";
+import type { HealthStats, Recommendation, DuplicateGroup, QuarantineItem } from "./services/api";
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<string>("overview");

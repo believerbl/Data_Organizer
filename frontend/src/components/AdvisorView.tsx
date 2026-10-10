@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sparkles, Send, Bot, User, ShieldCheck } from "lucide-react";
+import { Sparkles, Send, Bot, User } from "lucide-react";
 import { api } from "../services/api";
 
 interface Message {

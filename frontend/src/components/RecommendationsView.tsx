@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { 
-  Sparkles, Shield, Trash2, CheckCircle2, 
-  FileText, Image as ImageIcon, Box, HelpCircle, Archive, AlertCircle 
+  Sparkles, Shield, CheckCircle2, 
+  FileText, Image as ImageIcon, Box, Archive 
 } from "lucide-react";
-import { Recommendation, api } from "../services/api";
+import { api } from "../services/api";
+import type { Recommendation } from "../services/api";
 import { formatBytes, formatDate } from "../utils/formatters";
 
 interface Props {
@@ -11,20 +12,22 @@ interface Props {
   onRefresh: () => void;
 }
 
-export const RecommendationsView: React.FC<Props> = ({ recommendations, onRefresh }) => {
+export const RecommendationsView: React.FC<Props> = ({ recommendations = [], onRefresh }) => {
   const [filterGroup, setFilterGroup] = useState<string>("all");
   const [actingFileId, setActingFileId] = useState<number | null>(null);
 
-  const filteredRecs = recommendations.filter((r) => {
+  const safeRecs = recommendations || [];
+
+  const filteredRecs = safeRecs.filter((r) => {
     if (filterGroup === "all") return true;
     return r.group_key === filterGroup;
   });
 
-  const highConfidenceRecs = recommendations.filter(
-    (r) => r.confidence >= 0.90 && r.recommendation_type === "DELETE"
+  const highConfidenceRecs = safeRecs.filter(
+    (r) => (r.confidence || 0) >= 0.90 && r.recommendation_type === "DELETE"
   );
 
-  const totalFilteredSavings = filteredRecs.reduce((acc, r) => acc + r.potential_saving_bytes, 0);
+  const totalFilteredSavings = filteredRecs.reduce((acc, r) => acc + (r.potential_saving_bytes || 0), 0);
 
   const handleQuarantine = async (fileId: number) => {
     setActingFileId(fileId);
@@ -72,7 +75,7 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations, onRefres
   };
 
   const getConfidenceBadge = (confidence: number) => {
-    const percent = Math.round(confidence * 100);
+    const percent = Math.round((confidence || 0) * 100);
     if (percent >= 90) {
       return <span className="badge badge-emerald">{percent}% Confident</span>;
     } else if (percent >= 75) {
@@ -163,7 +166,7 @@ export const RecommendationsView: React.FC<Props> = ({ recommendations, onRefres
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {getConfidenceBadge(rec.confidence)}
                   <span className="badge badge-purple" style={{ fontFamily: "var(--font-mono)" }}>
-                    {formatBytes(rec.size)}
+                    {formatBytes(rec.size || 0)}
                   </span>
                 </div>
               </div>

@@ -1,17 +1,19 @@
 import React, { useState } from "react";
-import { Shield, RotateCcw, Trash2, Clock, CheckCircle2, AlertOctagon } from "lucide-react";
-import { QuarantineItem, api } from "../services/api";
-import { formatBytes, formatDate, daysRemaining } from "../utils/formatters";
+import { Shield, RotateCcw, Trash2, Clock, CheckCircle2 } from "lucide-react";
+import { api } from "../services/api";
+import type { QuarantineItem } from "../services/api";
+import { formatBytes, daysRemaining } from "../utils/formatters";
 
 interface Props {
   quarantineItems: QuarantineItem[];
   onRefresh: () => void;
 }
 
-export const QuarantineView: React.FC<Props> = ({ quarantineItems, onRefresh }) => {
+export const QuarantineView: React.FC<Props> = ({ quarantineItems = [], onRefresh }) => {
   const [actingId, setActingId] = useState<number | null>(null);
 
-  const totalQuarantineBytes = quarantineItems.reduce((acc, item) => acc + item.file_size, 0);
+  const safeItems = quarantineItems || [];
+  const totalQuarantineBytes = safeItems.reduce((acc, item) => acc + (item.file_size || 0), 0);
 
   const handleRestore = async (quarantineId: number) => {
     setActingId(quarantineId);
@@ -74,12 +76,12 @@ export const QuarantineView: React.FC<Props> = ({ quarantineItems, onRefresh }) 
             {formatBytes(totalQuarantineBytes)}
           </div>
           <span style={{ fontSize: "0.75rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>
-            {quarantineItems.length} quarantined items
+            {safeItems.length} quarantined items
           </span>
         </div>
       </div>
 
-      {quarantineItems.length === 0 ? (
+      {safeItems.length === 0 ? (
         <div className="glass-panel" style={{ textAlign: "center", padding: "48px 24px" }}>
           <CheckCircle2 size={42} style={{ color: "var(--accent-emerald)", margin: "0 auto 12px" }} />
           <h4 style={{ fontSize: "1.1rem", marginBottom: 6 }}>Quarantine Vault is empty</h4>
@@ -89,9 +91,9 @@ export const QuarantineView: React.FC<Props> = ({ quarantineItems, onRefresh }) 
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {quarantineItems.map((item) => {
+          {safeItems.map((item) => {
             const daysLeft = daysRemaining(item.purge_at);
-            const filename = item.original_path.split(/[\\/]/).pop() || item.original_path;
+            const filename = (item.original_path || "").split(/[\\/]/).pop() || item.original_path;
 
             return (
               <div key={item.id} className="rec-card" style={{ padding: "16px 20px" }}>
@@ -100,7 +102,7 @@ export const QuarantineView: React.FC<Props> = ({ quarantineItems, onRefresh }) 
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                       <span style={{ fontWeight: 600, fontSize: "0.95rem" }}>{filename}</span>
                       <span className="badge badge-purple" style={{ fontFamily: "var(--font-mono)" }}>
-                        {formatBytes(item.file_size)}
+                        {formatBytes(item.file_size || 0)}
                       </span>
                       <span className="badge badge-amber">
                         <Clock size={12} /> {daysLeft} days remaining

@@ -2,6 +2,7 @@ import subprocess
 import sys
 import os
 import time
+import webbrowser
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -29,7 +30,7 @@ def main():
         cwd=str(BACKEND_DIR)
     )
 
-    time.sleep(1.5)
+    time.sleep(2)
 
     print("[2/2] Starting Vite Frontend on http://localhost:5173 ...")
     # Start Vite frontend
@@ -39,10 +40,16 @@ def main():
         shell=True
     )
 
+    time.sleep(2)
     print("\n>>> Data Organizer is running!")
-    print(">>> Open frontend in browser: http://localhost:5173")
-    print(">>> API Swagger Docs:        http://127.0.0.1:8000/docs")
+    print(">>> Opening browser at: http://localhost:5173")
+    print(">>> API Swagger Docs:   http://127.0.0.1:8000/docs")
     print("\nPress Ctrl+C to terminate both servers.\n")
+
+    try:
+        webbrowser.open("http://localhost:5173")
+    except Exception:
+        pass
 
     try:
         backend_proc.wait()

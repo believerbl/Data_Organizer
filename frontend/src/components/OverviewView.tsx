@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { 
-  ShieldCheck, HardDrive, Sparkles, FolderSync, AlertTriangle, 
-  CheckCircle2, ArrowRight, Play, Check 
+  ShieldCheck, HardDrive, Sparkles, FolderSync, 
+  ArrowRight, Play, Check 
 } from "lucide-react";
-import { HealthStats, api } from "../services/api";
+import { api } from "../services/api";
+import type { HealthStats } from "../services/api";
 import { formatBytes } from "../utils/formatters";
 
 interface Props {
@@ -58,10 +59,14 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
 
   const scoreColor = score >= 80 ? "var(--accent-emerald)" : score >= 60 ? "var(--accent-amber)" : "var(--accent-rose)";
 
+  const potentialSavings = stats?.indexed?.potential_savings_bytes || 0;
+  const pendingCount = stats?.indexed?.pending_recommendations_count || 0;
+  const percentUsed = stats?.disk?.percent_used ?? 0;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* Quick Action Hero Banner */}
-      {(stats?.indexed.potential_savings_bytes || 0) > 0 && (
+      {potentialSavings > 0 && (
         <div style={{
           background: "linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%)",
           border: "1px solid rgba(99, 102, 241, 0.3)",
@@ -87,10 +92,10 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
             </div>
             <div>
               <h3 style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: 4 }}>
-                Instant Recovery Candidate: {formatBytes(stats?.indexed.potential_savings_bytes || 0)}
+                Instant Recovery Candidate: {formatBytes(potentialSavings)}
               </h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                Found {stats?.indexed.pending_recommendations_count} safe review candidates (including exact duplicates and obsolete installers).
+                Found {pendingCount} safe review candidates (including exact duplicates and obsolete installers).
               </p>
             </div>
           </div>
@@ -151,19 +156,19 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
             <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
                 <span style={{ color: "var(--text-muted)" }}>Duplicates Cleanliness</span>
-                <span style={{ fontWeight: 600 }}>{stats?.sub_scores.duplicates ?? 100}/100</span>
+                <span style={{ fontWeight: 600 }}>{stats?.sub_scores?.duplicates ?? 100}/100</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
                 <span style={{ color: "var(--text-muted)" }}>Junk / Installers Cleanliness</span>
-                <span style={{ fontWeight: 600 }}>{stats?.sub_scores.junk_cleanliness ?? 100}/100</span>
+                <span style={{ fontWeight: 600 }}>{stats?.sub_scores?.junk_cleanliness ?? 100}/100</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
                 <span style={{ color: "var(--text-muted)" }}>Drive Capacity Headroom</span>
-                <span style={{ fontWeight: 600 }}>{stats?.sub_scores.capacity ?? 80}/100</span>
+                <span style={{ fontWeight: 600 }}>{stats?.sub_scores?.capacity ?? 80}/100</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
                 <span style={{ color: "var(--text-muted)" }}>Safety & Protection Lock</span>
-                <span style={{ fontWeight: 600, color: "var(--accent-emerald)" }}>{stats?.sub_scores.safety ?? 95}/100</span>
+                <span style={{ fontWeight: 600, color: "var(--accent-emerald)" }}>{stats?.sub_scores?.safety ?? 95}/100</span>
               </div>
             </div>
           </div>
@@ -188,10 +193,10 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: "0.9rem" }}>
               <span style={{ fontWeight: 600 }}>
-                {formatBytes(stats?.disk.used_bytes || 0)} used of {formatBytes(stats?.disk.total_bytes || 0)}
+                {formatBytes(stats?.disk?.used_bytes || 0)} used of {formatBytes(stats?.disk?.total_bytes || 0)}
               </span>
               <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                {stats?.disk.percent_used.toFixed(1)}%
+                {percentUsed.toFixed(1)}%
               </span>
             </div>
             {/* Multi-segment capacity bar */}
@@ -204,7 +209,7 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
               display: "flex"
             }}>
               <div style={{
-                width: `${Math.min(100, stats?.disk.percent_used || 50)}%`,
+                width: `${Math.min(100, Math.max(0, percentUsed))}%`,
                 background: "var(--grad-primary)",
                 borderRadius: "6px 0 0 6px"
               }} />
@@ -215,19 +220,19 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
             <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
               <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Free Space</div>
               <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-cyan)", marginTop: 2 }}>
-                {formatBytes(stats?.disk.free_bytes || 0)}
+                {formatBytes(stats?.disk?.free_bytes || 0)}
               </div>
             </div>
             <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
               <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Duplicates</div>
               <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-amber)", marginTop: 2 }}>
-                {formatBytes(stats?.indexed.duplicate_bytes || 0)}
+                {formatBytes(stats?.indexed?.duplicate_bytes || 0)}
               </div>
             </div>
             <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
               <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Quarantined</div>
               <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-rose)", marginTop: 2 }}>
-                {formatBytes(stats?.indexed.quarantined_bytes || 0)}
+                {formatBytes(stats?.indexed?.quarantined_bytes || 0)}
               </div>
             </div>
           </div>
@@ -282,7 +287,7 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
             Target Folders:
           </span>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {availableTargets.map((target) => {
+            {(availableTargets || []).map((target) => {
               const isChecked = selectedTargets.includes(target);
               const folderName = target.split(/[\\/]/).pop() || target;
               return (
