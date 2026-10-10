@@ -1,5 +1,15 @@
 const API_BASE = "http://127.0.0.1:8000/api";
 
+export interface DriveInfo {
+  drive: string;
+  device?: string;
+  fstype?: string;
+  total_bytes: number;
+  used_bytes: number;
+  free_bytes: number;
+  percent_used: number;
+}
+
 export interface HealthStats {
   overall_health_score: number;
   sub_scores: {
@@ -14,6 +24,7 @@ export interface HealthStats {
     used_bytes: number;
     free_bytes: number;
     percent_used: number;
+    drives?: DriveInfo[];
   };
   indexed: {
     total_files: number;
@@ -86,6 +97,21 @@ export interface QuarantineItem {
   status: string;
 }
 
+export interface TargetItem {
+  path: string;
+  label: string;
+  total_bytes?: number;
+  free_bytes?: number;
+  used_bytes?: number;
+  percent_used?: number;
+}
+
+export interface ScanTargetsResponse {
+  drives: TargetItem[];
+  user_folders: TargetItem[];
+  default_targets: string[];
+}
+
 export const api = {
   async getStats(): Promise<HealthStats> {
     const res = await fetch(`${API_BASE}/stats`);
@@ -93,7 +119,7 @@ export const api = {
     return res.json();
   },
 
-  async getTargets(): Promise<{ default_targets: string[]; drives: any[] }> {
+  async getTargets(): Promise<ScanTargetsResponse> {
     const res = await fetch(`${API_BASE}/scan/targets`);
     if (!res.ok) throw new Error("Failed to fetch scan targets");
     return res.json();

@@ -1,30 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   ShieldCheck, HardDrive, Sparkles, FolderSync, 
-  ArrowRight, Play, Check 
+  ArrowRight, Play, Check, Database 
 } from "lucide-react";
 import { api } from "../services/api";
-import type { HealthStats } from "../services/api";
+import type { HealthStats, ScanTargetsResponse } from "../services/api";
 import { formatBytes } from "../utils/formatters";
 
 interface Props {
   stats: HealthStats | null;
+  scanTargets: ScanTargetsResponse | null;
   onRefresh: () => void;
   onNavigateToRecs: () => void;
-  availableTargets: string[];
 }
 
-export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRecs, availableTargets }) => {
-  const [selectedTargets, setSelectedTargets] = useState<string[]>(availableTargets.slice(0, 3));
+export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, onNavigateToRecs }) => {
+  const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const [customPath, setCustomPath] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+  // Initialize with all detected drives and user folders selected by default
+  useEffect(() => {
+    if (scanTargets && selectedTargets.length === 0) {
+      const allDrivesAndFolders = [
+        ...(scanTargets.drives || []).map(d => d.path),
+        ...(scanTargets.user_folders || []).map(f => f.path)
+      ];
+      setSelectedTargets(allDrivesAndFolders);
+    }
+  }, [scanTargets]);
 
   const toggleTarget = (target: string) => {
     if (selectedTargets.includes(target)) {
       setSelectedTargets(selectedTargets.filter(t => t !== target));
     } else {
       setSelectedTargets([...selectedTargets, target]);
+    }
+  };
+
+  const selectAllTargets = () => {
+    if (!scanTargets) return;
+    const all = [
+      ...(scanTargets.drives || []).map(d => d.path),
+      ...(scanTargets.user_folders || []).map(f => f.path)
+    ];
+    if (selectedTargets.length === all.length) {
+      setSelectedTargets([]);
+    } else {
+      setSelectedTargets(all);
     }
   };
 
@@ -35,15 +59,15 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
     }
 
     if (targetsToScan.length === 0) {
-      alert("Please select at least one folder to scan.");
+      alert("Please select at least one drive or folder to scan.");
       return;
     }
 
     setIsScanning(true);
-    setScanMessage("Scanning filesystem & computing hashes...");
+    setScanMessage(`Scanning ${targetsToScan.length} targets across all selected drives...`);
     try {
       const res = await api.startScan(targetsToScan);
-      setScanMessage(`Scan complete! ${res.result?.total_files || 0} files indexed.`);
+      setScanMessage(`Scan complete! ${res.result?.total_files || 0} files indexed across drives.`);
       onRefresh();
     } catch (err: any) {
       setScanMessage(`Scan error: ${err.message}`);
@@ -53,15 +77,17 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
   };
 
   const score = stats?.overall_health_score ?? 85;
-  // Circumference for 45 radius circle = 2 * PI * 45 ≈ 282.74
   const circumference = 282.74;
   const strokeDashoffset = circumference - (score / 100) * circumference;
-
   const scoreColor = score >= 80 ? "var(--accent-emerald)" : score >= 60 ? "var(--accent-amber)" : "var(--accent-rose)";
 
   const potentialSavings = stats?.indexed?.potential_savings_bytes || 0;
   const pendingCount = stats?.indexed?.pending_recommendations_count || 0;
-  const percentUsed = stats?.disk?.percent_used ?? 0;
+  const totalDiskBytes = stats?.disk?.total_bytes || 0;
+  const usedDiskBytes = stats?.disk?.used_bytes || 0;
+  const freeDiskBytes = stats?.disk?.free_bytes || 0;
+  const overallPercent = stats?.disk?.percent_used ?? 0;
+  const drivesList = stats?.disk?.drives || scanTargets?.drives || [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -95,7 +121,7 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
                 Instant Recovery Candidate: {formatBytes(potentialSavings)}
               </h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                Found {pendingCount} safe review candidates (including exact duplicates and obsolete installers).
+                Found {pendingCount} safe review candidates across your drives (exact duplicates, obsolete installers).
               </p>
             </div>
           </div>
@@ -109,7 +135,7 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
         </div>
       )}
 
-      {/* Main Grid: Health Score & Drive Usage */}
+      {/* Main Grid: Health Score & Multi-Drive Storage */}
       <div className="grid-2">
         {/* Health Score Card */}
         <div className="glass-panel">
@@ -130,12 +156,6 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
           <div className="health-gauge-container">
             <div className="radial-progress">
               <svg width="110" height="110">
-                <defs>
-                  <linearGradient id="score-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#06b6d4" />
-                    <stop offset="100%" stopColor="#6366f1" />
-                  </linearGradient>
-                </defs>
                 <circle className="radial-track" cx="55" cy="55" r="45" />
                 <circle 
                   className="radial-indicator" 
@@ -174,98 +194,129 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
           </div>
         </div>
 
-        {/* Disk Capacity Card */}
+        {/* Multi-Drive Storage Card */}
         <div className="glass-panel">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 700 }}>
-                Drive Storage
+                Drive Storage ({drivesList.length} Connected)
               </h3>
               <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                Live primary drive usage & allocation
+                Total system storage across all drives
               </p>
             </div>
             <span className="badge badge-emerald">
-              <HardDrive size={14} /> NTFS Mounted
+              <HardDrive size={14} /> Multi-Drive
             </span>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: "0.9rem" }}>
+          {/* Overall System Space Bar */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: "0.86rem" }}>
               <span style={{ fontWeight: 600 }}>
-                {formatBytes(stats?.disk?.used_bytes || 0)} used of {formatBytes(stats?.disk?.total_bytes || 0)}
+                Total System: {formatBytes(usedDiskBytes)} used of {formatBytes(totalDiskBytes)} ({formatBytes(freeDiskBytes)} free)
               </span>
               <span style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                {percentUsed.toFixed(1)}%
+                {overallPercent.toFixed(1)}%
               </span>
             </div>
-            {/* Multi-segment capacity bar */}
             <div style={{
               width: "100%",
-              height: 12,
+              height: 10,
               background: "rgba(255, 255, 255, 0.08)",
-              borderRadius: 6,
-              overflow: "hidden",
-              display: "flex"
+              borderRadius: 5,
+              overflow: "hidden"
             }}>
               <div style={{
-                width: `${Math.min(100, Math.max(0, percentUsed))}%`,
+                width: `${Math.min(100, Math.max(0, overallPercent))}%`,
+                height: "100%",
                 background: "var(--grad-primary)",
-                borderRadius: "6px 0 0 6px"
+                borderRadius: 5
               }} />
             </div>
           </div>
 
-          <div className="grid-3" style={{ marginTop: 20 }}>
-            <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
-              <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Free Space</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-cyan)", marginTop: 2 }}>
-                {formatBytes(stats?.disk?.free_bytes || 0)}
-              </div>
-            </div>
-            <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
-              <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Duplicates</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-amber)", marginTop: 2 }}>
-                {formatBytes(stats?.indexed?.duplicate_bytes || 0)}
-              </div>
-            </div>
-            <div style={{ background: "var(--bg-card-secondary)", padding: 12, borderRadius: 10 }}>
-              <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)", textTransform: "uppercase" }}>Quarantined</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--accent-rose)", marginTop: 2 }}>
-                {formatBytes(stats?.indexed?.quarantined_bytes || 0)}
-              </div>
-            </div>
+          {/* Individual Drive Bars */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+            {drivesList.map((d: any, idx: number) => {
+              const driveName = d.drive || d.path || `Drive ${idx+1}`;
+              const driveTotal = d.total_bytes || d.total || 0;
+              const driveUsed = d.used_bytes || (driveTotal - (d.free_bytes || d.free || 0));
+              const driveFree = d.free_bytes || d.free || 0;
+              const drivePercent = d.percent_used || (driveTotal > 0 ? (driveUsed / driveTotal) * 100 : 0);
+
+              return (
+                <div key={driveName} style={{
+                  background: "var(--bg-card-secondary)",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid var(--border-subtle)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.84rem", marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Database size={14} style={{ color: "var(--accent-cyan)" }} />
+                      {driveName}
+                    </span>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
+                      {formatBytes(driveFree)} free of {formatBytes(driveTotal)} ({drivePercent.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div style={{
+                    width: "100%",
+                    height: 6,
+                    background: "rgba(255, 255, 255, 0.06)",
+                    borderRadius: 3,
+                    overflow: "hidden"
+                  }}>
+                    <div style={{
+                      width: `${Math.min(100, Math.max(0, drivePercent))}%`,
+                      height: "100%",
+                      background: drivePercent > 90 ? "var(--grad-danger)" : drivePercent > 75 ? "var(--grad-warm)" : "var(--grad-safe)",
+                      borderRadius: 3
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Intelligent Scan Launcher */}
+      {/* Intelligent Multi-Drive Scanner */}
       <div className="glass-panel">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
           <div>
             <h3 style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem", fontWeight: 700 }}>
-              Intelligent Filesystem Scanner
+              Intelligent Multi-Drive Scanner
             </h3>
             <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-              Select folders to index and inspect. Operates locally with zero cloud upload.
+              Select all drives or target folders to index. All processing happens 100% locally.
             </p>
           </div>
-          <button 
-            id="start-scan-btn"
-            className="btn btn-primary"
-            onClick={handleStartScan}
-            disabled={isScanning}
-          >
-            {isScanning ? (
-              <>
-                <FolderSync size={16} className="status-dot scanning" /> Scanning...
-              </>
-            ) : (
-              <>
-                <Play size={16} /> Start Scan
-              </>
-            )}
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={selectAllTargets}
+            >
+              {selectedTargets.length > 0 ? "Toggle / Select All" : "Select All Drives"}
+            </button>
+            <button 
+              id="start-scan-btn"
+              className="btn btn-primary"
+              onClick={handleStartScan}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <>
+                  <FolderSync size={16} className="status-dot scanning" /> Scanning Drives...
+                </>
+              ) : (
+                <>
+                  <Play size={16} /> Scan Selected ({selectedTargets.length})
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {scanMessage && (
@@ -282,51 +333,107 @@ export const OverviewView: React.FC<Props> = ({ stats, onRefresh, onNavigateToRe
           </div>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <span style={{ fontSize: "0.82rem", color: "var(--text-subtle)", textTransform: "uppercase", fontWeight: 600 }}>
-            Target Folders:
-          </span>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {(availableTargets || []).map((target) => {
-              const isChecked = selectedTargets.includes(target);
-              const folderName = target.split(/[\\/]/).pop() || target;
-              return (
-                <div
-                  key={target}
-                  onClick={() => toggleTarget(target)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 14px",
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    background: isChecked ? "rgba(99, 102, 241, 0.15)" : "var(--bg-card-secondary)",
-                    border: `1px solid ${isChecked ? "var(--accent-primary)" : "var(--border-subtle)"}`,
-                    color: isChecked ? "#fff" : "var(--text-muted)",
-                    fontSize: "0.86rem",
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  <div style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 4,
-                    background: isChecked ? "var(--accent-primary)" : "rgba(255, 255, 255, 0.1)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff"
-                  }}>
-                    {isChecked && <Check size={12} />}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Section 1: Connected Drives */}
+          <div>
+            <span style={{ fontSize: "0.78rem", color: "var(--accent-cyan)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+              💽 System Drives (Full Partitions):
+            </span>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
+              {(scanTargets?.drives || []).map((drive) => {
+                const isChecked = selectedTargets.includes(drive.path);
+                return (
+                  <div
+                    key={drive.path}
+                    onClick={() => toggleTarget(drive.path)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      background: isChecked ? "rgba(99, 102, 241, 0.18)" : "var(--bg-card-secondary)",
+                      border: `1px solid ${isChecked ? "var(--accent-primary)" : "var(--border-subtle)"}`,
+                      color: isChecked ? "#fff" : "var(--text-muted)",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 5,
+                      background: isChecked ? "var(--accent-primary)" : "rgba(255, 255, 255, 0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#fff"
+                    }}>
+                      {isChecked && <Check size={14} />}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>
+                        {drive.label || drive.path}
+                      </div>
+                      <div style={{ fontSize: "0.74rem", color: "var(--text-subtle)" }}>
+                        Full Partition Indexing
+                      </div>
+                    </div>
                   </div>
-                  <span>{folderName}</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          <div style={{ marginTop: 8 }}>
+          {/* Section 2: User Home Folders */}
+          {(scanTargets?.user_folders || []).length > 0 && (
+            <div>
+              <span style={{ fontSize: "0.78rem", color: "var(--accent-emerald)", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>
+                📁 Specific User Folders:
+              </span>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {(scanTargets?.user_folders || []).map((folder) => {
+                  const isChecked = selectedTargets.includes(folder.path);
+                  return (
+                    <div
+                      key={folder.path}
+                      onClick={() => toggleTarget(folder.path)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 14px",
+                        borderRadius: 10,
+                        cursor: "pointer",
+                        background: isChecked ? "rgba(16, 185, 129, 0.15)" : "var(--bg-card-secondary)",
+                        border: `1px solid ${isChecked ? "var(--accent-emerald)" : "var(--border-subtle)"}`,
+                        color: isChecked ? "#fff" : "var(--text-muted)",
+                        fontSize: "0.86rem",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      <div style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 4,
+                        background: isChecked ? "var(--accent-emerald)" : "rgba(255, 255, 255, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff"
+                      }}>
+                        {isChecked && <Check size={12} />}
+                      </div>
+                      <span>{folder.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Custom Folder Path */}
+          <div style={{ marginTop: 4 }}>
             <span style={{ fontSize: "0.82rem", color: "var(--text-subtle)", display: "block", marginBottom: 6 }}>
               Or enter custom folder path:
             </span>

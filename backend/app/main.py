@@ -71,24 +71,38 @@ def get_stats():
 
 @app.get("/api/scan/targets")
 def get_scan_targets():
-    """Lists available system directories and local drive partitions."""
+    """Lists available system directories and all local drive partitions."""
     available_drives = []
     for part in psutil.disk_partitions(all=False):
         try:
+            if "cdrom" in part.opts or part.fstype == "":
+                continue
             usage = psutil.disk_usage(part.mountpoint)
             available_drives.append({
                 "path": part.mountpoint,
+                "label": f"Drive {part.mountpoint.rstrip('\\')} ({usage.total // (1024**3)} GB)",
                 "fstype": part.fstype,
-                "total": usage.total,
-                "free": usage.free
+                "total_bytes": usage.total,
+                "free_bytes": usage.free,
+                "used_bytes": usage.used,
+                "percent_used": usage.percent
             })
         except Exception:
             continue
 
-    existing_default_targets = [p for p in DEFAULT_SCAN_TARGETS if os.path.exists(p)]
+    user_folders = []
+    for target in DEFAULT_SCAN_TARGETS:
+        if os.path.exists(target):
+            name = os.path.basename(target)
+            user_folders.append({
+                "path": target,
+                "label": name
+            })
+
     return {
-        "default_targets": existing_default_targets,
-        "drives": available_drives
+        "drives": available_drives,
+        "user_folders": user_folders,
+        "default_targets": [d["path"] for d in available_drives]
     }
 
 def execute_scan_task(targets: List[str], max_files: Optional[int]):

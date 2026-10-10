@@ -6,7 +6,7 @@ import { DuplicatesView } from "./components/DuplicatesView";
 import { QuarantineView } from "./components/QuarantineView";
 import { AdvisorView } from "./components/AdvisorView";
 import { api } from "./services/api";
-import type { HealthStats, Recommendation, DuplicateGroup, QuarantineItem } from "./services/api";
+import type { HealthStats, Recommendation, DuplicateGroup, QuarantineItem, ScanTargetsResponse } from "./services/api";
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<string>("overview");
@@ -14,7 +14,7 @@ export function App() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [quarantineItems, setQuarantineItems] = useState<QuarantineItem[]>([]);
-  const [availableTargets, setAvailableTargets] = useState<string[]>([]);
+  const [scanTargets, setScanTargets] = useState<ScanTargetsResponse | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [backendError, setBackendError] = useState<string | null>(null);
 
@@ -27,15 +27,15 @@ export function App() {
         api.getRecommendations().catch(() => []),
         api.getDuplicates().catch(() => []),
         api.getQuarantine().catch(() => []),
-        api.getTargets().catch(() => ({ default_targets: [], drives: [] })),
+        api.getTargets().catch(() => ({ drives: [], user_folders: [], default_targets: [] })),
       ]);
 
       if (statsData) setStats(statsData);
       setRecommendations(recsData);
       setDuplicateGroups(dupesData);
       setQuarantineItems(quarData);
-      if (targetsData.default_targets) {
-        setAvailableTargets(targetsData.default_targets);
+      if (targetsData) {
+        setScanTargets(targetsData);
       }
     } catch (err: any) {
       setBackendError("Could not reach backend service at http://127.0.0.1:8000. Please start the backend.");
@@ -54,9 +54,9 @@ export function App() {
         return (
           <OverviewView
             stats={stats}
+            scanTargets={scanTargets}
             onRefresh={loadAllData}
             onNavigateToRecs={() => setCurrentTab("recommendations")}
-            availableTargets={availableTargets}
           />
         );
       case "recommendations":
@@ -89,12 +89,12 @@ export function App() {
 
   const getTabTitle = () => {
     switch (currentTab) {
-      case "overview": return { title: "Dashboard & Health", subtitle: "Continuous local storage evaluation and entropy control" };
+      case "overview": return { title: "Dashboard & Health", subtitle: "Continuous multi-drive storage evaluation and entropy control" };
       case "recommendations": return { title: "Recommendations Review Hub", subtitle: "Explainable AI recommendations backed by transparent confidence scores" };
       case "duplicates": return { title: "Duplicate Clones Inspector", subtitle: "Byte-for-byte SHA-256 duplicate clusters with guaranteed primary copy preservation" };
       case "quarantine": return { title: "Quarantine Vault", subtitle: "Safety net holding area with 30-day retention countdown and instant 1-click restore" };
-      case "advisor": return { title: "Storage Advisor Assistant", subtitle: "Conversational reasoning layer over your indexed filesystem" };
-      default: return { title: "Storage Agent", subtitle: "" };
+      case "advisor": return { title: "Storage Advisor Assistant", subtitle: "Conversational reasoning layer over all your indexed drives" };
+      default: return { title: "Data Organizer", subtitle: "" };
     }
   };
 

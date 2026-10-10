@@ -5,25 +5,64 @@ from app.database.db import get_db
 
 def compute_health_metrics() -> dict:
     """
-    Computes Storage Health Score (0-100) and sub-scores:
-    Capacity, Duplicates, Organization, Backup Safety, and Junk cleanliness.
-    Transparent, non-gamified metrics reflecting real filesystem health.
+    Computes Storage Health Score (0-100) and sub-scores across ALL detected drives.
+    Provides aggregated capacity as well as individual drive breakdowns (C:, D:, etc.).
     """
-    # 1. Drive statistics (primary drive of workspace)
+    drives_list = []
+    total_disk_bytes = 0
+    total_used_bytes = 0
+    total_free_bytes = 0
+
     try:
-        current_drive = os.path.splitdrive(os.getcwd())[0] or "C:"
-        if not current_drive.endswith("\\"):
-            current_drive += "\\"
-        usage = psutil.disk_usage(current_drive)
-        disk_total = usage.total
-        disk_used = usage.used
-        disk_free = usage.free
-        disk_percent_used = usage.percent
+        for part in psutil.disk_partitions(all=False):
+            try:
+                # Skip read-only or CD-ROM drives if any
+                if "cdrom" in part.opts or part.fstype == "":
+                    continue
+                usage = psutil.disk_usage(part.mountpoint)
+                total_disk_bytes += usage.total
+                total_used_bytes += usage.used
+                total_free_bytes += usage.free
+
+                drives_list.append({
+                    "drive": part.mountpoint,
+                    "device": part.device,
+                    "fstype": part.fstype,
+                    "total_bytes": usage.total,
+                    "used_bytes": usage.used,
+                    "free_bytes": usage.free,
+                    "percent_used": usage.percent
+                })
+            except (PermissionError, OSError):
+                continue
     except Exception:
-        disk_total = 500 * (1024**3)
-        disk_used = 250 * (1024**3)
-        disk_free = 250 * (1024**3)
-        disk_percent_used = 50.0
+        pass
+
+    # Fallback if no drives detected
+    if not drives_list:
+        try:
+            cur_drive = os.path.splitdrive(os.getcwd())[0] or "C:"
+            if not cur_drive.endswith("\\"):
+                cur_drive += "\\"
+            usage = psutil.disk_usage(cur_drive)
+            total_disk_bytes = usage.total
+            total_used_bytes = usage.used
+            total_free_bytes = usage.free
+            drives_list.append({
+                "drive": cur_drive,
+                "device": cur_drive,
+                "fstype": "NTFS",
+                "total_bytes": usage.total,
+                "used_bytes": usage.used,
+                "free_bytes": usage.free,
+                "percent_used": usage.percent
+            })
+        except Exception:
+            total_disk_bytes = 500 * (1024**3)
+            total_used_bytes = 250 * (1024**3)
+            total_free_bytes = 250 * (1024**3)
+
+    disk_percent_used = (total_used_bytes / total_disk_bytes * 100) if total_disk_bytes > 0 else 50.0
 
     with get_db() as conn:
         total_files = conn.execute("SELECT COUNT(*) FROM files WHERE is_quarantined = 0 AND is_deleted = 0").fetchone()[0]
@@ -70,28 +109,21 @@ def compute_health_metrics() -> dict:
         pending_rec_count = rec_stats[0]
         potential_savings_bytes = rec_stats[1]
 
-    # Calculate sub-scores (0 to 100)
-    # Capacity score: 100 if < 50% used, down to 20 if > 95% used
+    # Sub-scores
     capacity_score = max(10, min(100, int(100 - (disk_percent_used * 0.9))))
     
-    # Duplicates score: 100 if 0 duplicates, degrades as dupe ratio increases
     if total_bytes > 0:
         dupe_ratio = dupe_bytes / total_bytes
         duplicates_score = max(20, min(100, int(100 - (dupe_ratio * 200))))
-    else:
-        duplicates_score = 100
-
-    # Junk cleanliness score: degrades based on junk size relative to scanned
-    if total_bytes > 0:
         junk_ratio = junk_bytes / total_bytes
         junk_score = max(20, min(100, int(100 - (junk_ratio * 150))))
     else:
+        duplicates_score = 100
         junk_score = 100
 
-    organization_score = 82  # Baseline organization
-    safety_score = 95        # High safety guarantee (quarantine + protected rules)
+    organization_score = 82
+    safety_score = 95
 
-    # Weighted Overall Health Score
     overall_health = int(
         (capacity_score * 0.25) +
         (duplicates_score * 0.25) +
@@ -110,10 +142,11 @@ def compute_health_metrics() -> dict:
             "safety": safety_score
         },
         "disk": {
-            "total_bytes": disk_total,
-            "used_bytes": disk_used,
-            "free_bytes": disk_free,
-            "percent_used": disk_percent_used
+            "total_bytes": total_disk_bytes,
+            "used_bytes": total_used_bytes,
+            "free_bytes": total_free_bytes,
+            "percent_used": disk_percent_used,
+            "drives": drives_list
         },
         "indexed": {
             "total_files": total_files,
