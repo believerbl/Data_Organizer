@@ -3,22 +3,29 @@ import {
   ShieldCheck, HardDrive, Sparkles, FolderSync, 
   ArrowRight, Play, Check, Database 
 } from "lucide-react";
-import { api } from "../services/api";
-import type { HealthStats, ScanTargetsResponse } from "../services/api";
+import type { HealthStats, ScanTargetsResponse, ScanStatusResponse } from "../services/api";
 import { formatBytes } from "../utils/formatters";
 
 interface Props {
   stats: HealthStats | null;
   scanTargets: ScanTargetsResponse | null;
+  scanStatus: ScanStatusResponse | null;
+  onStartScan: (targets: string[]) => void;
   onRefresh: () => void;
   onNavigateToRecs: () => void;
 }
 
-export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, onNavigateToRecs }) => {
+export const OverviewView: React.FC<Props> = ({ 
+  stats, 
+  scanTargets, 
+  scanStatus, 
+  onStartScan, 
+  onNavigateToRecs 
+}) => {
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const [customPath, setCustomPath] = useState("");
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+  const isScanning = Boolean(scanStatus?.is_scanning);
 
   // Initialize with all detected drives and user folders selected by default
   useEffect(() => {
@@ -52,7 +59,7 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
     }
   };
 
-  const handleStartScan = async () => {
+  const handleStartScan = () => {
     const targetsToScan = [...selectedTargets];
     if (customPath.trim()) {
       targetsToScan.push(customPath.trim());
@@ -63,17 +70,7 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
       return;
     }
 
-    setIsScanning(true);
-    setScanMessage(`Scanning ${targetsToScan.length} targets across all selected drives...`);
-    try {
-      const res = await api.startScan(targetsToScan);
-      setScanMessage(`Scan complete! ${res.result?.total_files || 0} files indexed across drives.`);
-      onRefresh();
-    } catch (err: any) {
-      setScanMessage(`Scan error: ${err.message}`);
-    } finally {
-      setIsScanning(false);
-    }
+    onStartScan(targetsToScan);
   };
 
   const score = stats?.overall_health_score ?? 85;
@@ -297,6 +294,7 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
             <button
               className="btn btn-secondary btn-sm"
               onClick={selectAllTargets}
+              disabled={isScanning}
             >
               {selectedTargets.length > 0 ? "Toggle / Select All" : "Select All Drives"}
             </button>
@@ -308,7 +306,7 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
             >
               {isScanning ? (
                 <>
-                  <FolderSync size={16} className="status-dot scanning" /> Scanning Drives...
+                  <FolderSync size={16} className="status-dot scanning" /> Scanning in background...
                 </>
               ) : (
                 <>
@@ -319,17 +317,17 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
           </div>
         </div>
 
-        {scanMessage && (
+        {scanStatus?.error && (
           <div style={{
-            background: "rgba(99, 102, 241, 0.1)",
-            border: "1px solid rgba(99, 102, 241, 0.25)",
+            background: "rgba(244, 63, 94, 0.15)",
+            border: "1px solid rgba(244, 63, 94, 0.3)",
             borderRadius: 10,
             padding: "10px 14px",
             fontSize: "0.85rem",
-            color: "var(--accent-cyan)",
+            color: "var(--accent-rose)",
             marginBottom: 16
           }}>
-            {scanMessage}
+            Scan Error: {scanStatus.error}
           </div>
         )}
 
@@ -345,17 +343,18 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
                 return (
                   <div
                     key={drive.path}
-                    onClick={() => toggleTarget(drive.path)}
+                    onClick={() => !isScanning && toggleTarget(drive.path)}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
                       padding: "12px 14px",
                       borderRadius: 12,
-                      cursor: "pointer",
+                      cursor: isScanning ? "not-allowed" : "pointer",
                       background: isChecked ? "rgba(99, 102, 241, 0.18)" : "var(--bg-card-secondary)",
                       border: `1px solid ${isChecked ? "var(--accent-primary)" : "var(--border-subtle)"}`,
                       color: isChecked ? "#fff" : "var(--text-muted)",
+                      opacity: isScanning ? 0.7 : 1,
                       transition: "all 0.2s ease"
                     }}
                   >
@@ -397,17 +396,18 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
                   return (
                     <div
                       key={folder.path}
-                      onClick={() => toggleTarget(folder.path)}
+                      onClick={() => !isScanning && toggleTarget(folder.path)}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                         padding: "8px 14px",
                         borderRadius: 10,
-                        cursor: "pointer",
+                        cursor: isScanning ? "not-allowed" : "pointer",
                         background: isChecked ? "rgba(16, 185, 129, 0.15)" : "var(--bg-card-secondary)",
                         border: `1px solid ${isChecked ? "var(--accent-emerald)" : "var(--border-subtle)"}`,
                         color: isChecked ? "#fff" : "var(--text-muted)",
+                        opacity: isScanning ? 0.7 : 1,
                         fontSize: "0.86rem",
                         transition: "all 0.2s ease"
                       }}
@@ -443,6 +443,7 @@ export const OverviewView: React.FC<Props> = ({ stats, scanTargets, onRefresh, o
               value={customPath}
               onChange={(e) => setCustomPath(e.target.value)}
               placeholder="e.g. D:\MyProjects or C:\Users\Downloads"
+              disabled={isScanning}
               style={{
                 width: "100%",
                 background: "var(--bg-card-secondary)",

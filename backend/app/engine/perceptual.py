@@ -2,14 +2,19 @@ from pathlib import Path
 from PIL import Image
 import imagehash
 from app.config import IMAGE_EXTENSIONS
+from app.engine.hasher import is_cloud_placeholder
 
 def compute_image_meta(file_path: str) -> dict | None:
     """
     Extracts image dimensions and perceptual hash for visual similarity detection.
     Catches screenshots, resized variants, and near-duplicates.
+    Skips offline cloud files.
     """
     path = Path(file_path)
     if path.suffix.lower() not in IMAGE_EXTENSIONS:
+        return None
+
+    if is_cloud_placeholder(file_path):
         return None
 
     try:

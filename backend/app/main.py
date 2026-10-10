@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import psutil
+import threading
+import time
 from typing import List, Optional
 
 from app.config import DEFAULT_SCAN_TARGETS
@@ -53,20 +55,66 @@ class PurgeRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
 
-# In-memory scan state tracking
-scan_status = {
+# Thread-safe scan status
+scan_state_lock = threading.Lock()
+scan_state = {
     "is_scanning": False,
     "current_step": "idle",
-    "last_result": None
+    "progress_percent": 0,
+    "current_index": 0,
+    "total_files": 0,
+    "current_file": "",
+    "last_result": None,
+    "error": None
 }
+
+def scan_progress_callback(info: dict):
+    with scan_state_lock:
+        curr = info.get("current", 0)
+        tot = max(1, info.get("total", 1))
+        scan_state["current_step"] = info.get("step", "scanning")
+        scan_state["current_index"] = curr
+        scan_state["total_files"] = tot
+        scan_state["current_file"] = info.get("current_file", "")
+        scan_state["progress_percent"] = min(99, int((curr / tot) * 100))
+
+def run_background_scan(targets: List[str], max_files: Optional[int]):
+    global scan_state
+    try:
+        with scan_state_lock:
+            scan_state["is_scanning"] = True
+            scan_state["current_step"] = "discovering_files"
+            scan_state["progress_percent"] = 5
+            scan_state["error"] = None
+
+        res = scan_directories(targets, progress_callback=scan_progress_callback, max_files=max_files)
+        
+        with scan_state_lock:
+            scan_state["current_step"] = "generating_recommendations"
+            scan_state["progress_percent"] = 90
+            
+        recs_count = generate_recommendations()
+        res["recommendations_generated"] = recs_count
+
+        with scan_state_lock:
+            scan_state["last_result"] = res
+            scan_state["current_step"] = "completed"
+            scan_state["progress_percent"] = 100
+    except Exception as e:
+        with scan_state_lock:
+            scan_state["error"] = str(e)
+            scan_state["current_step"] = "error"
+    finally:
+        with scan_state_lock:
+            scan_state["is_scanning"] = False
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "app": "Personal Storage Agent"}
+    return {"status": "ok", "app": "Data Organizer"}
 
 @app.get("/api/stats")
 def get_stats():
-    """Returns Storage Health Score, disk usage, and indexed category metrics."""
+    """Returns Storage Health Score, multi-drive usage, and indexed category metrics."""
     return compute_health_metrics()
 
 @app.get("/api/scan/targets")
@@ -105,33 +153,45 @@ def get_scan_targets():
         "default_targets": [d["path"] for d in available_drives]
     }
 
-def execute_scan_task(targets: List[str], max_files: Optional[int]):
-    global scan_status
-    scan_status["is_scanning"] = True
-    scan_status["current_step"] = "indexing"
-    try:
-        res = scan_directories(targets, max_files=max_files)
-        scan_status["current_step"] = "generating_recommendations"
-        recs_count = generate_recommendations()
-        res["recommendations_generated"] = recs_count
-        scan_status["last_result"] = res
-    finally:
-        scan_status["is_scanning"] = False
-        scan_status["current_step"] = "idle"
-
 @app.post("/api/scan/start")
-def start_scan(req: ScanRequest, background_tasks: BackgroundTasks):
-    global scan_status
-    if scan_status["is_scanning"]:
-        raise HTTPException(status_code=409, detail="A scan is already in progress.")
-    
-    # Run scan synchronously or in background
-    execute_scan_task(req.targets, req.max_files)
-    return {"success": True, "message": "Scan completed successfully", "result": scan_status["last_result"]}
+def start_scan(req: ScanRequest):
+    global scan_state
+    with scan_state_lock:
+        if scan_state["is_scanning"]:
+            return {
+                "success": True,
+                "already_running": True,
+                "message": "A scan is already actively running in the background",
+                "status": scan_state
+            }
+        
+        # Reset state
+        scan_state["is_scanning"] = True
+        scan_state["progress_percent"] = 0
+        scan_state["current_step"] = "starting"
+        scan_state["total_files"] = 0
+        scan_state["current_file"] = ""
+        scan_state["error"] = None
+
+    # Spawn asynchronous worker thread
+    t = threading.Thread(
+        target=run_background_scan,
+        args=(req.targets, req.max_files),
+        daemon=True
+    )
+    t.start()
+
+    return {
+        "success": True,
+        "already_running": False,
+        "message": "Scan started in background",
+        "status": scan_state
+    }
 
 @app.get("/api/scan/status")
 def get_scan_status():
-    return scan_status
+    with scan_state_lock:
+        return dict(scan_state)
 
 @app.get("/api/recommendations")
 def get_recommendations(status: str = "PENDING"):

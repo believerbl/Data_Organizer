@@ -4,11 +4,29 @@ import os
 CHUNK_SIZE = 1024 * 1024  # 1MB chunks
 SAMPLE_SIZE = 64 * 1024   # 64KB for partial hash
 
+def is_cloud_placeholder(file_path: str) -> bool:
+    """
+    Checks if a file is an offline cloud placeholder (e.g. OneDrive, Dropbox, iCloud)
+    to avoid triggering unwanted background cloud downloads.
+    """
+    try:
+        stat_res = os.stat(file_path)
+        attrs = getattr(stat_res, 'st_file_attributes', 0)
+        # FILE_ATTRIBUTE_OFFLINE (0x1000)
+        # FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS (0x00400000)
+        # FILE_ATTRIBUTE_RECALL_ON_OPEN (0x00040000)
+        return bool(attrs & (0x1000 | 0x00400000 | 0x00040000))
+    except Exception:
+        return False
+
 def compute_partial_hash(file_path: str) -> str | None:
     """
     Computes a fast fingerprint of a file by hashing its head, middle, and tail.
-    Extremely efficient for weeding out non-duplicates before full cryptographic hashing.
+    Safely skips offline cloud files.
     """
+    if is_cloud_placeholder(file_path):
+        return None
+
     try:
         size = os.path.getsize(file_path)
         if size == 0:
@@ -34,8 +52,11 @@ def compute_partial_hash(file_path: str) -> str | None:
 def compute_full_hash(file_path: str) -> str | None:
     """
     Computes the full SHA-256 cryptographic hash of a file.
-    Only called when two or more files share identical size and partial hash.
+    Safely skips offline cloud files.
     """
+    if is_cloud_placeholder(file_path):
+        return None
+
     try:
         hasher = hashlib.sha256()
         with open(file_path, "rb") as f:

@@ -10,6 +10,7 @@ interface Props {
   pendingRecsCount: number;
   duplicatesCount: number;
   quarantineCount: number;
+  isScanning?: boolean;
   onRefresh: () => void;
   isRefreshing: boolean;
 }
@@ -20,6 +21,7 @@ export const Navbar: React.FC<Props> = ({
   pendingRecsCount,
   duplicatesCount,
   quarantineCount,
+  isScanning = false,
   onRefresh,
   isRefreshing,
 }) => {
@@ -108,8 +110,8 @@ export const Navbar: React.FC<Props> = ({
         </button>
 
         <div className="system-status-indicator">
-          <div className="status-dot" />
-          <span>Local Index Engine</span>
+          <div className={`status-dot ${isScanning ? "scanning" : ""}`} />
+          <span>{isScanning ? "Scanning Drives..." : "Local Index Engine"}</span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.72rem", color: "var(--text-subtle)" }}>

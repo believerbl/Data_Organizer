@@ -112,6 +112,17 @@ export interface ScanTargetsResponse {
   default_targets: string[];
 }
 
+export interface ScanStatusResponse {
+  is_scanning: boolean;
+  current_step: string;
+  progress_percent: number;
+  current_index: number;
+  total_files: number;
+  current_file: string;
+  last_result?: any;
+  error?: string | null;
+}
+
 export const api = {
   async getStats(): Promise<HealthStats> {
     const res = await fetch(`${API_BASE}/stats`);
@@ -125,7 +136,7 @@ export const api = {
     return res.json();
   },
 
-  async startScan(targets: string[], max_files?: number): Promise<any> {
+  async startScan(targets: string[], max_files?: number): Promise<{ success: boolean; already_running?: boolean; message: string; status: ScanStatusResponse }> {
     const res = await fetch(`${API_BASE}/scan/start`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -135,8 +146,9 @@ export const api = {
     return res.json();
   },
 
-  async getScanStatus(): Promise<any> {
+  async getScanStatus(): Promise<ScanStatusResponse> {
     const res = await fetch(`${API_BASE}/scan/status`);
+    if (!res.ok) throw new Error("Failed to fetch scan status");
     return res.json();
   },
 
